@@ -1,32 +1,102 @@
-# language-to-action-robot-agent
-Agentic AI system that decomposes natural-language instructions into robot  pick-and-place sub-tasks, executes them via IK-driven control in a real MuJoCo  physics simulation, verifies outcomes, retries on failure, and explains its  reasoning — built for InnovaHack Chapter-1 (Agentic AI track).
-
 # Robot Task Agent
 
 **InnovaHack Chapter-1 — Domain 4: Agentic AI**
 *Autonomous Personal Assistant Agent for Multi-Step Real-World Tasks*
 
-An agentic AI system that takes a single high-level natural-language instruction, 
-autonomously decomposes it into sub-tasks, executes each one via a real robot-arm 
-controller in MuJoCo physics simulation, verifies outcomes against ground-truth 
-state, retries intelligently on failure with diagnosed causes, and reports a 
-clear, transparent summary of what it did and why.
+An agentic system that takes one natural-language instruction, decomposes it into
+ordered sub-tasks, executes each on a 6-DOF robot arm in **real MuJoCo physics**,
+verifies the outcome against simulated ground truth, diagnoses failures, retries,
+and explains every decision it made.
 
-## What it does
+![Pick and place in MuJoCo](outputs/demo_strip.png)
 
-Give it an instruction like:
-> "Put the red block in the bin, then stack the blue block on the green block."
+*Left to right: approach, descend onto the red block, transfer, released in the bin.*
 
-The agent will:
-1. **Plan** — decompose the instruction into ordered sub-tasks (AWS Bedrock / GLM-5, 
-   with a heuristic fallback parser if the LLM is unavailable)
-2. **Execute** — drive a 6-DOF robot arm via inverse kinematics in a real MuJoCo 
-   physics simulation to perform each pick-and-place sub-task
-3. **Verify** — check success against the object's real physics-simulated position, 
-   not assumptions
-4. **Retry** — on failure, diagnose the likely cause (grasp slip, timing, placement 
-   accuracy) and retry with adjustments, up to a configurable limit
-5. **Report** — produce a human-readable trace log and final summary explaining 
-   every decision made
+## Quick start
 
-## Architecture
+```bash
+pip install -r requirements.txt
+```
+
+```bash
+python run_agent.py "put the red block in the bin"
+```
+
+```bash
+python dashboard/app.py
+```
+
+The dashboard serves on <http://localhost:7860> (it walks forward to 7869 if the
+port is busy).
+
+## Demo instructions that work
+
+```bash
+python run_agent.py "put the red block in the bin, then stack the blue block on the green block"
+```
+
+```bash
+python run_agent.py "put the block in the bin"
+```
+
+The first runs two sub-tasks end-to-end. The second is deliberately ambiguous —
+the agent asks which block rather than guessing, then re-plans on your answer.
+
+## How it works
+
+1. **Plan** — AWS Bedrock (GLM-5) decomposes the instruction into ordered
+   sub-tasks. A heuristic keyword parser takes over if Bedrock is unreachable,
+   and the run is clearly labelled when that happens.
+2. **Clarify** — if the instruction is genuinely ambiguous ("the block", when
+   four exist), the agent asks instead of guessing. The bar is deliberately
+   high: plural phrasing and any colour word resolve it without a question.
+3. **Execute** — an IK-driven waypoint controller drives the arm through
+   approach → align → descend → grasp → lift → transfer → descend-over →
+   lower → release → retreat, in MuJoCo.
+4. **Verify** — success is read from the object's final position in `mjData`,
+   never from the policy's own claim. A block still flat on the table cannot
+   pass as stacked.
+5. **Retry** — failures are diagnosed by kind (grasp slip, placement accuracy,
+   release height) and retried with matched adjustments, up to a limit.
+6. **Report** — a JSONL trace log plus a summary of what happened and why.
+
+## What is real, and what is not
+
+This matters more than a demo that overclaims, so it is stated plainly:
+
+- **Real:** the MuJoCo physics simulation, the arm's kinematics and IK, contact
+  and collision, gravity, the release, and where objects finally come to rest.
+  Verification reads actual simulation state.
+- **Real:** task decomposition by the LLM, failure diagnosis, and the retry loop.
+- **Not learned:** the controller is a scripted waypoint sequence, not a trained
+  policy. It does not claim to be — but unlike a mock, its outcome is *not*
+  predetermined: a mis-aimed approach genuinely misses and genuinely fails.
+- **Assisted:** friction-based grasping of a 40mm cube proved too solver-sensitive
+  to tune reliably, so while the gripper is closed the block is held to the grip
+  site. It is handed back to the physics engine on release and falls under real
+  gravity. `Executor.describe_policy()` reports this at runtime, and the
+  dashboard shows it as a banner.
+
+`--mock` swaps in a fully scripted policy with no physics, for a fast
+dependency-free run. It is labelled as scripted everywhere it appears.
+
+## Layout
+
+| Path | Role |
+| --- | --- |
+| `run_agent.py` | CLI front-end |
+| `dashboard/app.py` | Gradio front-end |
+| `agent/task_agent.py` | The plan → execute → verify → retry loop, shared by both front-ends |
+| `agent/planner.py` | Bedrock decomposition, fallback parser, ambiguity check |
+| `agent/executor.py` | Waypoint controller and rollouts |
+| `agent/verifier.py` | Ground-truth success checks |
+| `agent/retry_controller.py` | Failure diagnosis and retry adjustments |
+| `agent/trace_logger.py` | JSONL trace log |
+| `env/so101_env.py` | MuJoCo environment |
+| `env/scene.xml` | Arm, table, four blocks, bin |
+
+## Configuration
+
+`configs/settings.py` holds object positions, target regions, retry limits and
+tolerances. Bedrock model and region come from `BEDROCK_MODEL_ID` and
+`AWS_DEFAULT_REGION`.
