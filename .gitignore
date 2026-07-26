@@ -24,9 +24,10 @@ wheels/
 *.egg
 
 # Virtual environments
+# NOTE: do NOT use a bare `ENV/` here - Windows git matches paths
+# case-insensitively, so it silently ignored this project's env/ package.
 .venv/
 venv/
-ENV/
 
 # Environment variables & API keys
 .env

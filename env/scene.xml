@@ -1,0 +1,135 @@
+<mujoco model="so101_pickplace">
+  <compiler angle="radian" meshdir="."/>
+
+  <option timestep="0.002" gravity="0 0 -9.81" integrator="implicitfast"/>
+
+  <asset>
+    <texture name="grid" type="2d" builtin="checker" rgb1="0.2 0.2 0.2" rgb2="0.3 0.3 0.3" width="512" height="512"/>
+    <material name="grid" texture="grid" texrepeat="4 4"/>
+    <texture name="sky" type="skybox" builtin="gradient" rgb1="0.3 0.5 0.7" rgb2="0.1 0.1 0.15" width="256" height="256"/>
+  </asset>
+
+  <default>
+    <joint armature="0.01" damping="1" limited="true"/>
+    <geom contype="1" conaffinity="1" friction="1.2 0.02 0.001" solref="0.005 1"/>
+    <position kp="900" kv="60" forcerange="-350 350"/>
+  </default>
+
+  <worldbody>
+    <light diffuse="0.9 0.9 0.9" pos="0.3 0 2.5" dir="0 0 -1" directional="true"/>
+    <light diffuse="0.4 0.4 0.4" pos="1.5 1.5 2" dir="-0.5 -0.5 -0.8"/>
+
+    <!-- Cameras used by render(); camera1 is the demo view. -->
+    <camera name="camera1" pos="1.1 -0.85 0.75" xyaxes="0.6 0.8 0 -0.35 0.26 0.9"/>
+    <camera name="camera2" pos="0.35 0 1.3" xyaxes="1 0 0 0 1 0"/>
+
+    <geom name="floor" type="plane" size="3 3 0.1" pos="0 0 0" material="grid"/>
+    <geom name="table" type="box" size="0.5 0.4 0.01" pos="0.35 0 0.01" rgba="0.55 0.45 0.35 1"/>
+
+    <!-- Blocks: real free bodies so they can be grasped, lifted and dropped. -->
+    <body name="red_block" pos="0.25 0.1 0.04">
+      <freejoint name="red_block_free"/>
+      <geom name="red_block_geom" type="box" size="0.02 0.02 0.02" rgba="0.85 0.2 0.2 1" mass="0.05"/>
+    </body>
+    <body name="blue_block" pos="0.25 -0.1 0.04">
+      <freejoint name="blue_block_free"/>
+      <geom name="blue_block_geom" type="box" size="0.02 0.02 0.02" rgba="0.2 0.4 0.85 1" mass="0.05"/>
+    </body>
+    <body name="green_block" pos="0.15 0.1 0.04">
+      <freejoint name="green_block_free"/>
+      <geom name="green_block_geom" type="box" size="0.02 0.02 0.02" rgba="0.2 0.75 0.2 1" mass="0.05"/>
+    </body>
+    <body name="yellow_block" pos="0.15 -0.1 0.04">
+      <freejoint name="yellow_block_free"/>
+      <geom name="yellow_block_geom" type="box" size="0.02 0.02 0.02" rgba="0.95 0.8 0.2 1" mass="0.05"/>
+    </body>
+
+    <!-- Bin. Floor top sits at z=0.04 so a resting block centres at z=0.06,
+         which is exactly TARGET_REGIONS["bin"] in configs/settings.py. -->
+    <body name="bin_body" pos="0.5 0 0.02">
+      <geom name="bin_base" type="box" size="0.07 0.07 0.01" pos="0 0 0.01" rgba="0.35 0.28 0.2 1"/>
+      <geom name="bin_wall_back" type="box" size="0.07 0.004 0.025" pos="0 0.066 0.045" rgba="0.45 0.36 0.26 1"/>
+      <geom name="bin_wall_front" type="box" size="0.07 0.004 0.025" pos="0 -0.066 0.045" rgba="0.45 0.36 0.26 1"/>
+      <geom name="bin_wall_left" type="box" size="0.004 0.07 0.025" pos="-0.066 0 0.045" rgba="0.45 0.36 0.26 1"/>
+      <geom name="bin_wall_right" type="box" size="0.004 0.07 0.025" pos="0.066 0 0.045" rgba="0.45 0.36 0.26 1"/>
+    </body>
+
+    <!-- Arm. Link lengths chosen so the wrist reaches the bin at r=0.5.
+         Shoulder pivot is at z=0.12; see SO101Environment.SHOULDER_Z. -->
+    <body name="base_link" pos="0 0 0.02">
+      <geom name="base" type="cylinder" size="0.06 0.03" pos="0 0 0.01" rgba="0.25 0.25 0.3 1"/>
+
+      <body name="link1" gravcomp="1" pos="0 0 0.06">
+        <joint name="joint1" type="hinge" axis="0 0 1" range="-3.14 3.14" pos="0 0 0"/>
+        <geom contype="0" conaffinity="0" type="cylinder" size="0.045 0.02" rgba="0.4 0.4 0.45 1"/>
+
+        <body name="link2" gravcomp="1" pos="0 0 0.04">
+          <joint name="joint2" type="hinge" axis="0 1 0" range="-3.14 3.14" pos="0 0 0"/>
+          <geom contype="0" conaffinity="0" type="capsule" fromto="0 0 0 0 0 0.28" size="0.028" rgba="0.5 0.5 0.56 1"/>
+
+          <body name="link3" gravcomp="1" pos="0 0 0.28">
+            <joint name="joint3" type="hinge" axis="0 1 0" range="-3.14 3.14" pos="0 0 0"/>
+            <geom contype="0" conaffinity="0" type="capsule" fromto="0 0 0 0 0 0.24" size="0.023" rgba="0.55 0.55 0.6 1"/>
+
+            <body name="link4" gravcomp="1" pos="0 0 0.24">
+              <joint name="joint4" type="hinge" axis="0 1 0" range="-3.14 3.14" pos="0 0 0"/>
+              <geom contype="0" conaffinity="0" type="capsule" fromto="0 0 0 0 0 0.05" size="0.019" rgba="0.6 0.6 0.65 1"/>
+
+              <body name="link5" gravcomp="1" pos="0 0 0.05">
+                <joint name="joint5" type="hinge" axis="0 0 1" range="-3.14 3.14" pos="0 0 0"/>
+                <geom contype="0" conaffinity="0" type="cylinder" size="0.02 0.015" rgba="0.65 0.65 0.7 1"/>
+
+                <body name="link6" gravcomp="1" pos="0 0 0.03">
+                  <joint name="joint6" type="hinge" axis="0 1 0" range="-3.14 3.14" pos="0 0 0"/>
+                  <geom contype="0" conaffinity="0" type="cylinder" size="0.016 0.015" rgba="0.7 0.7 0.75 1"/>
+
+                  <body name="end_effector" gravcomp="1" pos="0 0 0.025">
+                    <geom name="gripper_base" type="box" size="0.022 0.032 0.008"
+                          rgba="0.75 0.75 0.8 1" contype="0" conaffinity="0"/>
+                    <!-- grip_site sits at the finger centre, so an IK target at a block's
+                         centre height makes the pads straddle it. -->
+                    <site name="grip_site" pos="0 0 -0.030" size="0.006" rgba="1 0 0 0.35"/>
+
+                    <body name="left_finger" gravcomp="1" pos="0 0.033 -0.030">
+                      <joint name="left_finger_joint" type="slide" axis="0 -1 0" range="0 0.0135" damping="12"/>
+                      <geom name="left_finger_geom" type="box" size="0.009 0.006 0.026"
+                            rgba="0.82 0.82 0.86 1" friction="6.0 0.2 0.01"
+                            solref="0.004 1" solimp="0.95 0.99 0.001"/>
+                    </body>
+
+                    <body name="right_finger" gravcomp="1" pos="0 -0.033 -0.030">
+                      <joint name="right_finger_joint" type="slide" axis="0 1 0" range="0 0.0135" damping="12"/>
+                      <geom name="right_finger_geom" type="box" size="0.009 0.006 0.026"
+                            rgba="0.82 0.82 0.86 1" friction="6.0 0.2 0.01"
+                            solref="0.004 1" solimp="0.95 0.99 0.001"/>
+                    </body>
+                  </body>
+                </body>
+              </body>
+            </body>
+          </body>
+        </body>
+      </body>
+    </body>
+  </worldbody>
+
+  <actuator>
+    <position name="act_joint1" joint="joint1" ctrlrange="-3.14 3.14"/>
+    <position name="act_joint2" joint="joint2" ctrlrange="-3.14 3.14"/>
+    <position name="act_joint3" joint="joint3" ctrlrange="-3.14 3.14"/>
+    <position name="act_joint4" joint="joint4" ctrlrange="-3.14 3.14"/>
+    <position name="act_joint5" joint="joint5" ctrlrange="-3.14 3.14"/>
+    <position name="act_joint6" joint="joint6" ctrlrange="-3.14 3.14"/>
+    <position name="act_left_finger" joint="left_finger_joint" ctrlrange="0 0.0135" kp="900" kv="30" forcerange="-300 300"/>
+    <position name="act_right_finger" joint="right_finger_joint" ctrlrange="0 0.0135" kp="900" kv="30" forcerange="-300 300"/>
+  </actuator>
+
+  <sensor>
+    <jointpos name="joint1_pos" joint="joint1"/>
+    <jointpos name="joint2_pos" joint="joint2"/>
+    <jointpos name="joint3_pos" joint="joint3"/>
+    <jointpos name="joint4_pos" joint="joint4"/>
+    <jointpos name="joint5_pos" joint="joint5"/>
+    <jointpos name="joint6_pos" joint="joint6"/>
+  </sensor>
+</mujoco>
