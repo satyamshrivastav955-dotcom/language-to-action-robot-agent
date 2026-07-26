@@ -1,3 +1,13 @@
+---
+title: Robot Task Agent
+emoji: 🤖
+colorFrom: yellow
+colorTo: red
+sdk: gradio
+app_file: app.py
+pinned: false
+---
+
 # Robot Task Agent
 
 **InnovaHack Chapter-1 — Domain 4: Agentic AI**
