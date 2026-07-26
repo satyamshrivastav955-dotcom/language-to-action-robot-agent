@@ -27,17 +27,28 @@ from configs.settings import (
 
 TASK_STATUS_HTML = """
 <style>
-    .status-pending {{ color: #888; }}
-    .status-in_progress {{ color: #2196F3; font-weight: bold; }}
+    /* Gradio's Soft theme follows the OS colour scheme, so these panels have
+       to be readable on both. Translucent backgrounds over the theme's own
+       surface, with borders carrying the colour coding, instead of hardcoded
+       light-theme fills that leave dark text on a dark page. */
+    .status-pending {{ color: #9aa0a6; }}
+    .status-in_progress {{ color: #4a9eff; font-weight: bold; }}
     .status-completed {{ color: #4CAF50; font-weight: bold; }}
-    .status-failed {{ color: #f44336; font-weight: bold; }}
-    .subtask-item {{ margin: 8px 0; padding: 8px; border-radius: 4px; background: #f5f5f5; }}
-    .attempt {{ color: #666; font-size: 0.9em; }}
+    .status-failed {{ color: #ff5f56; font-weight: bold; }}
+    .subtask-item {{ margin: 8px 0; padding: 10px; border-radius: 6px;
+                     background: rgba(128, 128, 128, 0.12);
+                     border-left: 3px solid rgba(128, 128, 128, 0.4); }}
+    .attempt {{ opacity: 0.75; font-size: 0.9em; }}
     .disclosure {{ margin: 8px 0; padding: 10px; border-radius: 6px;
-                   background: #fff8e1; border-left: 4px solid #ffb300;
-                   color: #5d4037; font-size: 0.9em; }}
-    .disclosure.ok {{ background: #e8f5e9; border-left-color: #43a047;
-                      color: #1b5e20; }}
+                   background: rgba(255, 179, 0, 0.14);
+                   border-left: 4px solid #ffb300;
+                   color: inherit; font-size: 0.9em; }}
+    .disclosure.ok {{ background: rgba(67, 160, 71, 0.16);
+                      border-left-color: #43a047; }}
+    .run-summary {{ margin-top: 16px; padding: 12px; border-radius: 8px;
+                    background: rgba(128, 128, 128, 0.12);
+                    border-left: 4px solid #4CAF50; }}
+    .run-summary.has-failures {{ border-left-color: #ffb300; }}
 </style>
 {content}
 """
@@ -108,11 +119,11 @@ def _format_final(subtasks: List[Dict], summary: Dict) -> str:
             f"{st.get('action')} {st.get('object')} -> {st.get('target')}</span></div>"
         )
 
-    bg = "#e8f5e9" if summary.get("failed", 0) == 0 else "#fff3e0"
+    cls = "run-summary" if summary.get("failed", 0) == 0 else "run-summary has-failures"
     stopped = ("<br><em>Run stopped before completion.</em>"
                if summary.get("stopped_early") else "")
     items.append(
-        f"<div style='margin-top:16px;padding:12px;background:{bg};border-radius:8px;'>"
+        f"<div class='{cls}'>"
         f"<strong>Summary:</strong><br>"
         f"Successful: {summary.get('successful', 0)}/{summary.get('total_subtasks', 0)}<br>"
         f"Failed: {summary.get('failed', 0)}/{summary.get('total_subtasks', 0)}<br>"
