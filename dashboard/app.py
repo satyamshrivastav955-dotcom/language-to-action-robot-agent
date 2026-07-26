@@ -139,6 +139,19 @@ def run_agent(instruction: str, max_retries: int, max_steps: int) -> Generator:
                            max_steps=int(max_steps)):
         last_video = event.video_path or last_video
 
+        if event.clarification:
+            # Planner declined to guess. Show the question in the plan panel
+            # and let the user answer in the same instruction box.
+            yield (event.status,
+                   TASK_STATUS_HTML.format(content=_disclosure_html() +
+                       "<div class='disclosure'><strong>I need a "
+                       "clarification before acting.</strong><br>"
+                       f"{event.clarification}<br><br><em>Answer by editing "
+                       "the instruction above (e.g. add a colour) and "
+                       "submitting again.</em></div>"),
+                   event.log_text, last_video)
+            return
+
         if event.summary is not None:
             plan_html = _format_final(event.subtasks, event.summary)
         else:

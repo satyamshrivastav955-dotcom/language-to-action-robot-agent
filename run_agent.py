@@ -79,12 +79,40 @@ def main():
         print(f"Instruction: {args.instruction}")
         print(f"{'=' * 60}\n")
 
+        instruction = args.instruction
         result = agent.execute_instruction(
-            args.instruction,
+            instruction,
             max_retries=args.retries,
             max_steps=args.steps,
             save_videos=not args.no_videos,
         )
+
+        # The planner asks rather than guessing when an instruction is
+        # genuinely ambiguous. Answer it and re-plan once; a second question
+        # would mean the answer did not help, so we stop there.
+        if result.get("clarification"):
+            print("\n" + "=" * 60)
+            print("CLARIFICATION NEEDED")
+            print("=" * 60)
+            print(result["clarification"])
+            try:
+                answer = input("\nYour answer: ").strip()
+            except EOFError:
+                answer = ""
+            if not answer:
+                print("No answer given; stopping.")
+                return result
+            instruction = f"{instruction} ({answer})"
+            print(f"\nRe-planning with: {instruction}\n")
+            result = agent.execute_instruction(
+                instruction,
+                max_retries=args.retries,
+                max_steps=args.steps,
+                save_videos=not args.no_videos,
+            )
+            if result.get("clarification"):
+                print(f"\nStill ambiguous: {result['clarification']}")
+                return result
 
         if result.get("error"):
             print(f"\nERROR: {result['error']}")

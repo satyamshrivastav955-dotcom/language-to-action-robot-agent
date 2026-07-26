@@ -139,6 +139,15 @@ class Planner:
         return json.loads(text)
     
     def _validate_and_ground(self, plan: Dict) -> Dict:
+        # A clarification request is a valid plan shape with no subtasks.
+        if plan.get("clarification_needed"):
+            return {
+                "clarification_needed": True,
+                "question": str(plan.get("question")
+                                or "Which object did you mean?"),
+                "subtasks": [],
+            }
+
         if "subtasks" not in plan:
             raise ValueError("Plan must have 'subtasks' key")
         
@@ -204,7 +213,31 @@ class Planner:
         matches.sort(key=lambda m: m[0])
         return matches
 
+    AMBIGUITY_COLORS = ("red", "blue", "green", "yellow")
+
+    def _detect_ambiguity(self, instruction: str) -> Optional[str]:
+        """Heuristic counterpart to the LLM's clarification check.
+
+        Fires when the instruction refers to a block without saying which one,
+        and no colour anywhere disambiguates it. Plural ("the blocks") means
+        all of them, which is not ambiguous.
+        """
+        text = instruction.lower()
+        if any(c in text for c in self.AMBIGUITY_COLORS):
+            return None
+        if "blocks" in text:
+            return None
+        if "block" not in text:
+            return None
+        return ("There are four blocks on the table (red, blue, green, "
+                "yellow). Which one did you mean?")
+
     def _create_fallback_plan(self, instruction: str) -> Dict:
+        question = self._detect_ambiguity(instruction)
+        if question:
+            return {"clarification_needed": True, "question": question,
+                    "subtasks": []}
+
         """Heuristic plan used only when the LLM is unreachable.
 
         Splits the instruction into clauses and reads each clause's own objects

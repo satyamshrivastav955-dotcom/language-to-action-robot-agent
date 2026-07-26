@@ -90,7 +90,22 @@ Rules:
 2. Always include "id" starting from 1
 3. For "stack", the target is another block to stack on top of
 4. For "pick_and_place", the target can be "bin" or a position
-5. Output ONLY the JSON, no other text"""
+5. Output ONLY the JSON, no other text
+
+Asking for clarification:
+If the instruction is genuinely ambiguous - it names an object that could
+refer to several of the available objects, and nothing in the instruction
+picks one out - do NOT guess. Instead output:
+{
+  "clarification_needed": true,
+  "question": "There are four blocks on the table (red, blue, green, yellow). Which one should I put in the bin?"
+}
+
+Ask ONLY when you truly cannot tell. "put the block in the bin" is ambiguous
+because four blocks exist. "put the red block in the bin" is NOT ambiguous.
+"put the blocks in the bin" is NOT ambiguous - it means all of them. Prefer
+acting over asking; an unnecessary question is worse than a reasonable
+assumption."""
 
 PLANNER_EXAMPLES = [
     {

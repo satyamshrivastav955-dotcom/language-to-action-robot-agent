@@ -41,6 +41,8 @@ class ProgressEvent:
     video_path: Optional[str] = None
     summary: Optional[Dict] = None
     error: Optional[str] = None
+    # Set when the planner declined to guess and asked a question instead.
+    clarification: Optional[str] = None
 
 
 class RobotTaskAgent:
@@ -100,6 +102,10 @@ class RobotTaskAgent:
         if final is None:
             return {"success": False, "error": "No events produced", "timestamp": time.time()}
 
+        if final.clarification:
+            return {"success": False, "clarification": final.clarification,
+                    "timestamp": time.time()}
+
         if final.error:
             return {"success": False, "error": final.error, "timestamp": time.time()}
 
@@ -149,6 +155,17 @@ class RobotTaskAgent:
             yield ProgressEvent(status=f"Planning failed: {e}",
                                 log_text=self._log_text(),
                                 error=f"Planning error: {e}")
+            return
+
+        # The planner may decline to guess and ask a question instead. Surface
+        # it and stop; the caller re-runs with the answer folded in.
+        if plan.get("clarification_needed"):
+            question = plan.get("question", "Which object did you mean?")
+            self.logger.log_clarification(question)
+            self.is_running = False
+            yield ProgressEvent(status="Clarification needed",
+                                log_text=self._log_text(),
+                                clarification=question)
             return
 
         subtasks = plan.get("subtasks", [])

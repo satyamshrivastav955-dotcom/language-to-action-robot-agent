@@ -185,6 +185,11 @@ class TraceLogger:
             type="task_complete"
         )
     
+    def log_clarification(self, question: str):
+        """Record that the agent asked rather than guessed."""
+        self.log("WARNING", f"Clarification needed: {question}",
+                 type="clarification_requested", question=question)
+
     def log_error(self, message: str, error: Exception = None, **metadata):
         self.log("ERROR", message, type="error", error=str(error) if error else None, **metadata)
     
