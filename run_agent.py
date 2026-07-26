@@ -7,6 +7,12 @@ with the Gradio dashboard; this file only parses arguments and prints.
 import os
 import sys
 import argparse
+import warnings
+
+# torch's CUDA init imports the deprecated pynvml and prints a FutureWarning on
+# every single run, which is noise during a live demo. Filter before the import
+# chain below pulls torch in.
+warnings.filterwarnings("ignore", message=".*pynvml.*")
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 

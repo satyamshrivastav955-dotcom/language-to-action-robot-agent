@@ -129,6 +129,7 @@ class ScriptedMuJoCoPolicy:
             # few mm clearance so the block is set down rather than driven into
             # the tower (which flicks it off).
             release_z = tgt[2] + BLOCK_SIZE + 0.006 + 0.008
+        self._stack_target = None if target == "bin" else target
 
         # Retry nudges the grasp, not the goal: the target is ground truth.
         grasp_xy = obj_pos[:2] + offset[:2]
@@ -146,12 +147,19 @@ class ScriptedMuJoCoPolicy:
              "grip": 1.0, "steps": 26},
             {"name": "transfer", "xyz": [place[0], place[1], self.CARRY_Z],
              "grip": 1.0, "steps": 34},
+            # Descend in two stages: get directly above the target first, then
+            # drop straight down. A single diagonal move clips the target block
+            # with the wrist and knocks it across the table before release.
+            {"name": "descend_over", "xyz": [place[0], place[1], release_z + 0.075],
+             "grip": 1.0, "steps": 20},
             {"name": "lower", "xyz": [place[0], place[1], release_z],
              "grip": 1.0, "steps": 55},
             {"name": "release", "xyz": [place[0], place[1], release_z],
              "grip": 0.0, "steps": 40},
+            # Retreat lifts straight up from wherever the release actually
+            # happened; a sideways move here drags the just-placed block.
             {"name": "retreat", "xyz": [place[0], place[1], self.CARRY_Z],
-             "grip": 0.0, "steps": 16},
+             "grip": 0.0, "steps": 16, "vertical_from_release": True},
         ]
         self._idx = 0
         self._phase_step = 0
@@ -167,7 +175,31 @@ class ScriptedMuJoCoPolicy:
 
         # Cache IK per phase - solving every step is wasteful and jitters.
         if self._phase_step == 0:
+            if phase.get("vertical_from_release"):
+                here = self.env.get_end_effector_pose()
+                phase["xyz"] = [float(here[0]), float(here[1]), self.CARRY_Z]
             self._cached_q = self.env.solve_ik(phase["xyz"])
+
+        # Position actuators settle short of the IK solution under gravity, by
+        # ~2cm in most of the workspace but over 4cm near the base - enough to
+        # set a block down off the edge of a stack target and tip it over. On
+        # the placement phases, re-solve from where the arm ACTUALLY is and
+        # correct the residual instead of trusting the one-shot solution.
+        elif phase["name"] == "lower" and self._phase_step % 6 == 0:
+            # Re-read the stack target too: it may have been nudged since the
+            # plan was built, and placing on its stale pose drops the block
+            # onto empty table.
+            goal = np.asarray(phase["xyz"], dtype=float)
+            # Deliberately NOT re-reading the stack target here. Tracking it
+            # during descent becomes a shove: the carried block nudges the
+            # target, the goal chases it, and both end up across the table.
+            # The frozen plan pose plus closed-loop correction on our OWN
+            # position is what actually lands the block.
+            actual = self.env.get_end_effector_pose()
+            err = goal - actual
+            if np.linalg.norm(err) > 0.005:
+                self._cached_q = self.env.solve_ik(goal + err * 0.9)
+
         self._phase_step += 1
 
         if self._phase_step >= phase["steps"] and self._idx < len(self._plan) - 1:

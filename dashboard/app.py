@@ -7,6 +7,10 @@ second copy of that loop, which drifted from the original.
 
 import os
 import sys
+import warnings
+
+# See run_agent.py - silence torch's deprecated-pynvml FutureWarning.
+warnings.filterwarnings("ignore", message=".*pynvml.*")
 from typing import Dict, Generator, List
 
 import gradio as gr
@@ -231,6 +235,17 @@ with gr.Blocks(title="Robot Task Agent") as demo:
 
 if __name__ == "__main__":
     os.makedirs(VIDEOS_DIR, exist_ok=True)
-    # Gradio 6 moved theme/css off the Blocks constructor onto launch().
-    demo.launch(server_name="0.0.0.0", server_port=7860, share=False,
-                css=css, theme=gr.themes.Soft())
+
+    # Try a few ports: during a demo the previous run is often still holding
+    # 7860, and a traceback at that moment looks far worse than a port bump.
+    for port in range(7860, 7870):
+        try:
+            # Gradio 6 moved theme/css off the Blocks constructor onto launch().
+            demo.launch(server_name="0.0.0.0", server_port=port, share=False,
+                        css=css, theme=gr.themes.Soft())
+            break
+        except OSError as exc:
+            print(f"[Dashboard] Port {port} busy ({exc.__class__.__name__}); trying {port + 1}")
+    else:
+        print("[Dashboard] No free port in 7860-7869. "
+              "Stop the other dashboard instance and retry.")
