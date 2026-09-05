@@ -1,153 +1,153 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 380" width="1200" height="380">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 400" width="1200" height="400">
   <defs>
     <!-- Background Gradients -->
     <linearGradient id="bgGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#070b14"/>
-      <stop offset="50%" stop-color="#0d1527"/>
-      <stop offset="100%" stop-color="#050811"/>
+      <stop offset="0%" stop-color="#080e1a"/>
+      <stop offset="50%" stop-color="#0f172a"/>
+      <stop offset="100%" stop-color="#060913"/>
     </linearGradient>
 
     <!-- Accent Gradients -->
     <linearGradient id="cyanBlueGrad" x1="0%" y1="0%" x2="100%" y2="0%">
       <stop offset="0%" stop-color="#00f2fe"/>
-      <stop offset="100%" stop-color="#4facfe"/>
+      <stop offset="100%" stop-color="#38bdf8"/>
     </linearGradient>
 
     <linearGradient id="borderGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#00d4ff" stop-opacity="0.8"/>
-      <stop offset="30%" stop-color="#3b82f6" stop-opacity="0.3"/>
-      <stop offset="70%" stop-color="#8b5cf6" stop-opacity="0.4"/>
-      <stop offset="100%" stop-color="#00ff88" stop-opacity="0.8"/>
+      <stop offset="0%" stop-color="#00d4ff" stop-opacity="0.9"/>
+      <stop offset="30%" stop-color="#3b82f6" stop-opacity="0.4"/>
+      <stop offset="70%" stop-color="#8b5cf6" stop-opacity="0.5"/>
+      <stop offset="100%" stop-color="#00ff88" stop-opacity="0.9"/>
     </linearGradient>
 
     <linearGradient id="badgeGrad" x1="0%" y1="0%" x2="100%" y2="0%">
-      <stop offset="0%" stop-color="#00d4ff" stop-opacity="0.15"/>
-      <stop offset="100%" stop-color="#3b82f6" stop-opacity="0.05"/>
+      <stop offset="0%" stop-color="#00d4ff" stop-opacity="0.2"/>
+      <stop offset="100%" stop-color="#3b82f6" stop-opacity="0.08"/>
     </linearGradient>
 
     <!-- Glowing Filter -->
     <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
-      <feGaussianBlur stdDeviation="6" result="blur" />
+      <feGaussianBlur stdDeviation="8" result="blur" />
       <feComposite in="SourceGraphic" in2="blur" operator="over" />
     </filter>
 
     <filter id="softGlow" x="-20%" y="-20%" width="140%" height="140%">
-      <feGaussianBlur stdDeviation="3" result="blur" />
+      <feGaussianBlur stdDeviation="4" result="blur" />
       <feComposite in="SourceGraphic" in2="blur" operator="over" />
     </filter>
 
     <!-- Grid Pattern -->
-    <pattern id="grid" width="30" height="30" patternUnits="userSpaceOnUse">
-      <path d="M 30 0 L 0 0 0 30" fill="none" stroke="#1e293b" stroke-width="0.5" stroke-opacity="0.4"/>
+    <pattern id="grid" width="32" height="32" patternUnits="userSpaceOnUse">
+      <path d="M 32 0 L 0 0 0 32" fill="none" stroke="#1e293b" stroke-width="0.75" stroke-opacity="0.5"/>
     </pattern>
   </defs>
 
   <style>
     @keyframes pulseGlow {
-      0%, 100% { opacity: 0.6; filter: drop-shadow(0 0 15px rgba(0,212,255,0.4)); }
-      50% { opacity: 0.95; filter: drop-shadow(0 0 25px rgba(0,212,255,0.8)); }
+      0%, 100% { opacity: 0.7; filter: drop-shadow(0 0 15px rgba(0,212,255,0.4)); }
+      50% { opacity: 1; filter: drop-shadow(0 0 25px rgba(0,212,255,0.9)); }
     }
     @keyframes floatParticle {
-      0%, 100% { transform: translateY(0px) translateX(0px); opacity: 0.3; }
-      50% { transform: translateY(-15px) translateX(10px); opacity: 0.8; }
+      0%, 100% { transform: translateY(0px) translateX(0px); opacity: 0.4; }
+      50% { transform: translateY(-12px) translateX(8px); opacity: 0.9; }
     }
-    .floating-p1 { animation: floatParticle 6s ease-in-out infinite; }
-    .floating-p2 { animation: floatParticle 8s ease-in-out infinite 1.5s; }
-    .floating-p3 { animation: floatParticle 7s ease-in-out infinite 3s; }
+    .floating-p1 { animation: floatParticle 5s ease-in-out infinite; }
+    .floating-p2 { animation: floatParticle 7s ease-in-out infinite 1s; }
+    .floating-p3 { animation: floatParticle 6s ease-in-out infinite 2s; }
   </style>
 
   <!-- Background Card -->
-  <rect width="1196" height="376" x="2" y="2" rx="16" fill="url(#bgGradient)"/>
-  <rect width="1196" height="376" x="2" y="2" rx="16" fill="url(#grid)"/>
+  <rect width="1196" height="396" x="2" y="2" rx="16" fill="url(#bgGradient)"/>
+  <rect width="1196" height="396" x="2" y="2" rx="16" fill="url(#grid)"/>
 
   <!-- Ambient Light Orbs -->
-  <circle cx="200" cy="80" r="140" fill="#00d4ff" opacity="0.07" filter="url(#glow)"/>
-  <circle cx="1000" cy="280" r="160" fill="#7928ca" opacity="0.08" filter="url(#glow)"/>
-  <circle cx="600" cy="190" r="220" fill="#00ff88" opacity="0.04" filter="url(#glow)"/>
+  <circle cx="180" cy="90" r="160" fill="#00d4ff" opacity="0.09" filter="url(#glow)"/>
+  <circle cx="1020" cy="300" r="180" fill="#7928ca" opacity="0.10" filter="url(#glow)"/>
+  <circle cx="620" cy="200" r="240" fill="#00ff88" opacity="0.05" filter="url(#glow)"/>
 
   <!-- Floating Tech Particles -->
-  <circle class="floating-p1" cx="150" cy="280" r="2" fill="#00d4ff"/>
-  <circle class="floating-p2" cx="950" cy="90" r="2.5" fill="#00ff88"/>
-  <circle class="floating-p3" cx="1080" cy="220" r="2" fill="#ff0080"/>
-  <circle class="floating-p1" cx="320" cy="60" r="1.5" fill="#3b82f6"/>
+  <circle class="floating-p1" cx="140" cy="300" r="2.5" fill="#00d4ff"/>
+  <circle class="floating-p2" cx="960" cy="80" r="3" fill="#00ff88"/>
+  <circle class="floating-p3" cx="1090" cy="210" r="2.5" fill="#ff0080"/>
+  <circle class="floating-p1" cx="300" cy="50" r="2" fill="#38bdf8"/>
 
   <!-- Border Outline with Gradient -->
-  <rect width="1196" height="376" x="2" y="2" rx="16" fill="none" stroke="url(#borderGrad)" stroke-width="1.5"/>
+  <rect width="1196" height="396" x="2" y="2" rx="16" fill="none" stroke="url(#borderGrad)" stroke-width="1.8"/>
 
   <!-- Top Status Bar Pill -->
-  <g transform="translate(60, 42)">
-    <rect width="360" height="32" rx="16" fill="url(#badgeGrad)" stroke="#00d4ff" stroke-opacity="0.4" stroke-width="1"/>
-    <circle cx="18" cy="16" r="5" fill="#00ff88">
+  <g transform="translate(60, 40)">
+    <rect width="380" height="34" rx="17" fill="url(#badgeGrad)" stroke="#00d4ff" stroke-opacity="0.5" stroke-width="1.2"/>
+    <circle cx="20" cy="17" r="5.5" fill="#00ff88">
       <animate attributeName="opacity" values="0.4;1;0.4" dur="2s" repeatCount="indefinite"/>
     </circle>
-    <text x="32" y="21" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-size="12" font-weight="700" fill="#00d4ff" letter-spacing="1.5">AUTONOMOUS EMBODIED ROBOTICS</text>
+    <text x="36" y="22" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="12.5" font-weight="800" fill="#00d4ff" letter-spacing="1.5">AUTONOMOUS EMBODIED ROBOTICS</text>
   </g>
 
   <!-- Status / Portfolio Tag Pill (Right) -->
-  <g transform="translate(840, 42)">
-    <rect width="300" height="32" rx="16" fill="#111827" stroke="#374151" stroke-width="1"/>
-    <text x="24" y="21" font-family="ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace" font-size="12" font-weight="600" fill="#9ca3af">PHYSICS-GROUNDED AGENT</text>
-    <rect x="235" y="8" width="50" height="16" rx="8" fill="#00ff88" fill-opacity="0.2"/>
-    <text x="244" y="20" font-family="ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace" font-size="10" font-weight="700" fill="#00ff88">v2.4</text>
+  <g transform="translate(830, 40)">
+    <rect width="310" height="34" rx="17" fill="#111827" stroke="#374151" stroke-width="1.2"/>
+    <text x="24" y="22" font-family="ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace" font-size="12.5" font-weight="700" fill="#cbd5e1">PHYSICS-GROUNDED AGENT</text>
+    <rect x="245" y="8" width="52" height="18" rx="9" fill="#00ff88" fill-opacity="0.25"/>
+    <text x="254" y="21" font-family="ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace" font-size="11" font-weight="800" fill="#00ff88">v2.4</text>
   </g>
 
   <!-- Central Title &amp; Brand -->
-  <g transform="translate(60, 150)">
+  <g transform="translate(60, 158)">
     <!-- Icon Symbol -->
     <g transform="translate(0, -35)">
-      <rect width="72" height="72" rx="16" fill="#0e1726" stroke="#00d4ff" stroke-width="1.5" filter="url(#softGlow)"/>
-      <path d="M 22 36 L 50 36 M 36 22 L 36 50 M 26 26 L 46 46 M 26 46 L 46 26" stroke="#00d4ff" stroke-width="2.5" stroke-linecap="round"/>
-      <circle cx="36" cy="36" r="6" fill="#00ff88"/>
+      <rect width="76" height="76" rx="18" fill="#0b1329" stroke="#00d4ff" stroke-width="1.8" filter="url(#softGlow)"/>
+      <path d="M 24 38 L 52 38 M 38 24 L 38 52 M 28 28 L 48 48 M 28 48 L 48 28" stroke="#00d4ff" stroke-width="2.8" stroke-linecap="round"/>
+      <circle cx="38" cy="38" r="6" fill="#00ff88"/>
     </g>
 
     <!-- Main Title -->
-    <text x="92" y="2" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', 'Inter', Roboto, sans-serif" font-size="44" font-weight="900" fill="#ffffff" letter-spacing="-0.5">
+    <text x="96" y="5" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', 'Inter', Roboto, sans-serif" font-size="46" font-weight="900" fill="#ffffff" letter-spacing="-0.5">
       NEXUS-1 <tspan fill="url(#cyanBlueGrad)">ROBOT TASK AGENT</tspan>
     </text>
 
     <!-- Subtitle / Elevator Hook -->
-    <text x="94" y="38" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', 'Inter', Roboto, sans-serif" font-size="17" font-weight="400" fill="#94a3b8" letter-spacing="0.2">
+    <text x="98" y="42" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', 'Inter', Roboto, sans-serif" font-size="17" font-weight="500" fill="#cbd5e1" letter-spacing="0.2">
       Closed-Loop Hierarchical Embodied AI &#8226; Local LLM Planning &#8226; 6-DOF DLS Kinematics &#8226; MuJoCo Physics Verification
     </text>
   </g>
 
   <!-- Bottom Capability Chips -->
-  <g transform="translate(60, 260)">
+  <g transform="translate(60, 275)">
     <!-- Chip 1: Local LLMs -->
     <g transform="translate(0, 0)">
-      <rect width="250" height="60" rx="10" fill="#0f172a" stroke="#1e293b" stroke-width="1.2"/>
-      <rect x="14" y="14" width="32" height="32" rx="8" fill="#00d4ff" fill-opacity="0.1"/>
-      <text x="24" y="35" font-family="sans-serif" font-size="16">&#129504;</text>
-      <text x="56" y="29" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="13" font-weight="700" fill="#f8fafc">100% Offline LLMs</text>
-      <text x="56" y="46" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="11" fill="#64748b">Ollama Qwen2.5 / Llama3.1</text>
+      <rect width="255" height="66" rx="12" fill="#0f172a" stroke="#1e293b" stroke-width="1.4"/>
+      <rect x="14" y="15" width="36" height="36" rx="9" fill="#00d4ff" fill-opacity="0.15"/>
+      <text x="23" y="39" font-family="sans-serif" font-size="18">&#129504;</text>
+      <text x="60" y="32" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="14" font-weight="800" fill="#ffffff">100% Offline LLMs</text>
+      <text x="60" y="50" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="11.5" font-weight="500" fill="#94a3b8">Ollama Qwen2.5 / Llama3.1</text>
     </g>
 
     <!-- Chip 2: MuJoCo Physics Ground Truth -->
-    <g transform="translate(270, 0)">
-      <rect width="260" height="60" rx="10" fill="#0f172a" stroke="#1e293b" stroke-width="1.2"/>
-      <rect x="14" y="14" width="32" height="32" rx="8" fill="#00ff88" fill-opacity="0.1"/>
-      <text x="24" y="35" font-family="sans-serif" font-size="16">&#9889;</text>
-      <text x="56" y="29" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="13" font-weight="700" fill="#f8fafc">Tier-A Physics Verifier</text>
-      <text x="56" y="46" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="11" fill="#64748b">Direct mjData State Probing</text>
+    <g transform="translate(275, 0)">
+      <rect width="265" height="66" rx="12" fill="#0f172a" stroke="#1e293b" stroke-width="1.4"/>
+      <rect x="14" y="15" width="36" height="36" rx="9" fill="#00ff88" fill-opacity="0.15"/>
+      <text x="23" y="39" font-family="sans-serif" font-size="18">&#9889;</text>
+      <text x="60" y="32" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="14" font-weight="800" fill="#ffffff">Tier-A Physics Verifier</text>
+      <text x="60" y="50" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="11.5" font-weight="500" fill="#94a3b8">Direct mjData State Probing</text>
     </g>
 
     <!-- Chip 3: Error Recovery Loop -->
-    <g transform="translate(550, 0)">
-      <rect width="260" height="60" rx="10" fill="#0f172a" stroke="#1e293b" stroke-width="1.2"/>
-      <rect x="14" y="14" width="32" height="32" rx="8" fill="#a855f7" fill-opacity="0.1"/>
-      <text x="24" y="35" font-family="sans-serif" font-size="16">&#127919;</text>
-      <text x="56" y="29" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="13" font-weight="700" fill="#f8fafc">Adaptive Miss Recovery</text>
-      <text x="56" y="46" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="11" fill="#64748b">&#916;p Metric Vector Correction</text>
+    <g transform="translate(560, 0)">
+      <rect width="265" height="66" rx="12" fill="#0f172a" stroke="#1e293b" stroke-width="1.4"/>
+      <rect x="14" y="15" width="36" height="36" rx="9" fill="#a855f7" fill-opacity="0.15"/>
+      <text x="23" y="39" font-family="sans-serif" font-size="18">&#127919;</text>
+      <text x="60" y="32" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="14" font-weight="800" fill="#ffffff">Adaptive Miss Recovery</text>
+      <text x="60" y="50" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="11.5" font-weight="500" fill="#94a3b8">&#916;p Metric Vector Correction</text>
     </g>
 
     <!-- Chip 4: State Persistence -->
-    <g transform="translate(830, 0)">
-      <rect width="250" height="60" rx="10" fill="#0f172a" stroke="#1e293b" stroke-width="1.2"/>
-      <rect x="14" y="14" width="32" height="32" rx="8" fill="#f59e0b" fill-opacity="0.1"/>
-      <text x="24" y="35" font-family="sans-serif" font-size="16">&#128260;</text>
-      <text x="56" y="29" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="13" font-weight="700" fill="#f8fafc">State Persistence</text>
-      <text x="56" y="46" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="11" fill="#64748b">Multi-Step Object Comp.</text>
+    <g transform="translate(845, 0)">
+      <rect width="255" height="66" rx="12" fill="#0f172a" stroke="#1e293b" stroke-width="1.4"/>
+      <rect x="14" y="15" width="36" height="36" rx="9" fill="#f59e0b" fill-opacity="0.15"/>
+      <text x="23" y="39" font-family="sans-serif" font-size="18">&#128260;</text>
+      <text x="60" y="32" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="14" font-weight="800" fill="#ffffff">State Persistence</text>
+      <text x="60" y="50" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="11.5" font-weight="500" fill="#94a3b8">Multi-Step Object Comp.</text>
     </g>
   </g>
 </svg>
