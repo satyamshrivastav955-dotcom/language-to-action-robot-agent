@@ -1,0 +1,590 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>NEXUS-1 | Autonomous Language-to-Action Robot Agent</title>
+  <meta name="description" content="Closed-Loop Hierarchical Embodied AI with Local LLM Reasoning, 6-DOF DLS Kinematics & Physics Verification in MuJoCo.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+  
+  <style>
+    :root {
+      --bg-primary: #070b14;
+      --bg-card: rgba(15, 23, 42, 0.65);
+      --bg-card-hover: rgba(30, 41, 59, 0.75);
+      --border-color: rgba(255, 255, 255, 0.08);
+      --border-accent: rgba(0, 212, 255, 0.3);
+      --text-primary: #f8fafc;
+      --text-secondary: #94a3b8;
+      --text-muted: #64748b;
+      --accent-cyan: #00d4ff;
+      --accent-green: #00ff88;
+      --accent-purple: #a855f7;
+      --accent-amber: #f59e0b;
+      --glow-cyan: 0 0 25px rgba(0, 212, 255, 0.25);
+      --radius-lg: 16px;
+      --radius-md: 10px;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background-color: var(--bg-primary);
+      color: var(--text-primary);
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      line-height: 1.6;
+      overflow-x: hidden;
+      background-image: 
+        radial-gradient(circle at 15% 15%, rgba(0, 212, 255, 0.08) 0%, transparent 40%),
+        radial-gradient(circle at 85% 65%, rgba(168, 85, 247, 0.08) 0%, transparent 40%),
+        radial-gradient(circle at 50% 90%, rgba(0, 255, 136, 0.05) 0%, transparent 40%);
+      background-attachment: fixed;
+    }
+
+    /* Container */
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 0 24px;
+    }
+
+    /* Navigation */
+    nav {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      background: rgba(7, 11, 20, 0.8);
+      border-bottom: 1px solid var(--border-color);
+      padding: 16px 0;
+    }
+
+    .nav-content {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .logo-group {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      text-decoration: none;
+      color: var(--text-primary);
+    }
+
+    .logo-icon {
+      width: 36px;
+      height: 36px;
+      background: linear-gradient(135deg, rgba(0, 212, 255, 0.2), rgba(168, 85, 247, 0.2));
+      border: 1px solid var(--accent-cyan);
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+      box-shadow: var(--glow-cyan);
+    }
+
+    .logo-text {
+      font-size: 20px;
+      font-weight: 800;
+      letter-spacing: -0.5px;
+    }
+
+    .logo-text span {
+      background: linear-gradient(90deg, var(--accent-cyan), #38bdf8);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .nav-links {
+      display: flex;
+      align-items: center;
+      gap: 20px;
+    }
+
+    .nav-link {
+      color: var(--text-secondary);
+      text-decoration: none;
+      font-size: 14px;
+      font-weight: 500;
+      transition: color 0.2s ease;
+    }
+
+    .nav-link:hover {
+      color: var(--accent-cyan);
+    }
+
+    .btn-github {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: rgba(255, 255, 255, 0.06);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      color: #fff;
+      padding: 8px 16px;
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 600;
+      text-decoration: none;
+      transition: all 0.2s ease;
+    }
+
+    .btn-github:hover {
+      background: rgba(255, 255, 255, 0.12);
+      border-color: var(--accent-cyan);
+      box-shadow: var(--glow-cyan);
+      transform: translateY(-1px);
+    }
+
+    /* Hero Section */
+    .hero-section {
+      padding: 40px 0 60px;
+    }
+
+    .hero-banner-img {
+      width: 100%;
+      height: auto;
+      border-radius: var(--radius-lg);
+      box-shadow: 0 16px 48px rgba(0, 0, 0, 0.6);
+      margin-bottom: 40px;
+    }
+
+    /* Badges Bar */
+    .badges-bar {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 10px;
+      margin-bottom: 40px;
+    }
+
+    .badge-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: rgba(15, 23, 42, 0.8);
+      border: 1px solid var(--border-color);
+      padding: 6px 14px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-secondary);
+    }
+
+    .badge-pill span.dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--accent-green);
+      box-shadow: 0 0 8px var(--accent-green);
+    }
+
+    /* Section Cards */
+    .section-title-group {
+      text-align: center;
+      margin-bottom: 36px;
+    }
+
+    .section-eyebrow {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--accent-cyan);
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      margin-bottom: 8px;
+    }
+
+    .section-title {
+      font-size: 32px;
+      font-weight: 800;
+      letter-spacing: -0.5px;
+      color: #fff;
+    }
+
+    .section-subtitle {
+      font-size: 15px;
+      color: var(--text-secondary);
+      max-width: 640px;
+      margin: 8px auto 0;
+    }
+
+    .glass-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-lg);
+      padding: 28px;
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      margin-bottom: 40px;
+      transition: border-color 0.3s ease, box-shadow 0.3s ease;
+    }
+
+    .glass-card:hover {
+      border-color: var(--border-accent);
+      box-shadow: var(--glow-cyan);
+    }
+
+    /* Video & Media Showcase */
+    .media-showcase {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 20px;
+    }
+
+    .demo-gif {
+      width: 100%;
+      max-width: 900px;
+      border-radius: var(--radius-md);
+      border: 1px solid rgba(0, 212, 255, 0.3);
+      box-shadow: 0 12px 40px rgba(0, 0, 0, 0.7);
+    }
+
+    .demo-strip {
+      width: 100%;
+      max-width: 900px;
+      border-radius: var(--radius-md);
+      border: 1px solid var(--border-color);
+    }
+
+    .caption {
+      font-size: 13px;
+      color: var(--text-secondary);
+      text-align: center;
+      font-style: italic;
+    }
+
+    /* Architecture & Terminal SVGs */
+    .svg-showcase {
+      width: 100%;
+      border-radius: var(--radius-md);
+      overflow: hidden;
+    }
+
+    .svg-showcase img {
+      width: 100%;
+      height: auto;
+      display: block;
+    }
+
+    /* Capability Grid */
+    .grid-4 {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 20px;
+      margin-bottom: 40px;
+    }
+
+    .cap-box {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-md);
+      padding: 22px;
+      transition: all 0.3s ease;
+    }
+
+    .cap-box:hover {
+      border-color: var(--accent-cyan);
+      transform: translateY(-3px);
+      background: var(--bg-card-hover);
+    }
+
+    .cap-icon {
+      font-size: 26px;
+      margin-bottom: 12px;
+    }
+
+    .cap-title {
+      font-size: 16px;
+      font-weight: 700;
+      color: #fff;
+      margin-bottom: 6px;
+    }
+
+    .cap-desc {
+      font-size: 13px;
+      color: var(--text-secondary);
+      line-height: 1.5;
+    }
+
+    /* Comparison Table */
+    .table-container {
+      overflow-x: auto;
+      margin: 20px 0;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13.5px;
+    }
+
+    th, td {
+      padding: 14px 18px;
+      text-align: left;
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    th {
+      background: rgba(15, 23, 42, 0.9);
+      color: var(--text-primary);
+      font-weight: 700;
+      text-transform: uppercase;
+      font-size: 11.5px;
+      letter-spacing: 1px;
+    }
+
+    tr:hover td {
+      background: rgba(255, 255, 255, 0.02);
+    }
+
+    .badge-check {
+      color: var(--accent-green);
+      font-weight: 700;
+    }
+
+    /* Quickstart Code Block */
+    .code-card {
+      background: #090d16;
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-md);
+      padding: 18px 22px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 13px;
+      color: #38bdf8;
+      position: relative;
+      margin-top: 14px;
+      overflow-x: auto;
+    }
+
+    .code-card .comment {
+      color: #64748b;
+    }
+
+    /* Footer */
+    footer {
+      border-top: 1px solid var(--border-color);
+      padding: 40px 0;
+      text-align: center;
+      margin-top: 60px;
+    }
+
+    .footer-text {
+      font-size: 13px;
+      color: var(--text-muted);
+    }
+
+    .footer-text a {
+      color: var(--accent-cyan);
+      text-decoration: none;
+    }
+
+    .footer-text a:hover {
+      text-decoration: underline;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Top Navigation -->
+  <nav>
+    <div class="container nav-content">
+      <a href="#" class="logo-group">
+        <div class="logo-icon">🤖</div>
+        <div class="logo-text">NEXUS-1 <span>AGENT</span></div>
+      </a>
+      <div class="nav-links">
+        <a href="#overview" class="nav-link">Overview</a>
+        <a href="#architecture" class="nav-link">Architecture</a>
+        <a href="#quickstart" class="nav-link">Quickstart</a>
+        <a href="https://github.com/satyamshrivastav955-dotcom/language-to-action-robot-agent" target="_blank" class="btn-github">
+          <svg width="16" height="16" fill="currentColor" viewBox="0 0 24 24"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/></svg>
+          GitHub Repository
+        </a>
+      </div>
+    </div>
+  </nav>
+
+  <main class="container hero-section">
+    <!-- Hero Banner Image -->
+    <img src="assets/hero_banner.svg" alt="NEXUS-1 Robot Task Agent Banner" class="hero-banner-img" />
+
+    <!-- Badges Bar -->
+    <div class="badges-bar">
+      <div class="badge-pill"><span class="dot"></span> Python 3.10+</div>
+      <div class="badge-pill">⚡ MuJoCo 3.0+ Physics</div>
+      <div class="badge-pill">🧠 Offline Local LLM (Ollama)</div>
+      <div class="badge-pill">⚙️ 6-DOF DLS Kinematics</div>
+      <div class="badge-pill">🔍 Tier-A Physics Verification</div>
+      <div class="badge-pill">🎯 Adaptive Error Recovery</div>
+    </div>
+
+    <!-- 4 Capabilities Grid -->
+    <div class="grid-4" id="overview">
+      <div class="cap-box">
+        <div class="cap-icon">🧠</div>
+        <div class="cap-title">100% Offline LLMs</div>
+        <div class="cap-desc">Powered by local Ollama (Qwen2.5 / Llama3.1) with native JSON grammar. Zero cloud latency and no API costs.</div>
+      </div>
+      <div class="cap-box">
+        <div class="cap-icon">⚡</div>
+        <div class="cap-title">Tier-A Physics Verifier</div>
+        <div class="cap-desc">Queries raw <code>mjData</code> simulation ground truth directly, preventing self-reported LLM hallucinations.</div>
+      </div>
+      <div class="cap-box">
+        <div class="cap-icon">🎯</div>
+        <div class="cap-title">Adaptive Miss Recovery</div>
+        <div class="cap-desc">Calculates exact 3D miss vectors &Delta;p = p<sub>target</sub> - p<sub>actual</sub> to compensate subsequent retry waypoints.</div>
+      </div>
+      <div class="cap-box">
+        <div class="cap-icon">🔄</div>
+        <div class="cap-title">State Persistence</div>
+        <div class="cap-desc">Physical world state persists across multi-step instructions without resetting or teleporting objects.</div>
+      </div>
+    </div>
+
+    <!-- Live Physical Simulation Showcase -->
+    <div class="glass-card">
+      <div class="section-title-group">
+        <div class="section-eyebrow">Physics Ground Truth</div>
+        <h2 class="section-title">Embodied Manipulation in MuJoCo</h2>
+        <p class="section-subtitle">Real-time 6-DOF manipulator executing pick-and-place with live in-frame kinematic HUD telemetry.</p>
+      </div>
+      <div class="media-showcase">
+        <img src="outputs/demo.gif" alt="MuJoCo 6-DOF Manipulation" class="demo-gif" />
+        <img src="outputs/demo_strip.png" alt="Approach, Grasp, Transfer, Release Sequence" class="demo-strip" />
+        <p class="caption">Manipulation Sequence: APPROACH &rarr; GRASP &rarr; TRANSFER &rarr; RELEASE IN BIN</p>
+      </div>
+    </div>
+
+    <!-- Architecture Section -->
+    <div class="glass-card" id="architecture">
+      <div class="section-title-group">
+        <div class="section-eyebrow">System Architecture</div>
+        <h2 class="section-title">Closed-Loop Reasoning &amp; Execution Pipeline</h2>
+        <p class="section-subtitle">Hierarchical LLM Decomposition &bull; DLS Inverse Kinematics &bull; MuJoCo Physics State Probing &bull; Vector Feedback</p>
+      </div>
+      <div class="svg-showcase">
+        <img src="assets/architecture_pipeline.svg" alt="NEXUS-1 Architecture Pipeline" />
+      </div>
+    </div>
+
+    <!-- Terminal Rollout Simulation -->
+    <div class="glass-card">
+      <div class="section-title-group">
+        <div class="section-eyebrow">Interactive CLI</div>
+        <h2 class="section-title">Live Execution Trace &amp; Telemetry</h2>
+        <p class="section-subtitle">Demonstrating structured subtask planning, 11-phase kinematics rollout, and perturbation recovery.</p>
+      </div>
+      <div class="svg-showcase">
+        <img src="assets/terminal_execution.svg" alt="NEXUS-1 Terminal Execution Simulation" />
+      </div>
+    </div>
+
+    <!-- Comparison Table -->
+    <div class="glass-card">
+      <div class="section-title-group">
+        <div class="section-eyebrow">The Embodied AI Gap</div>
+        <h2 class="section-title">Why Traditional Prompting Fails</h2>
+        <p class="section-subtitle">Why closed-loop physics verification and error compensation are essential for real-world manipulation.</p>
+      </div>
+      <div class="table-container">
+        <table>
+          <thead>
+            <tr>
+              <th>Dimension</th>
+              <th>Traditional Open-Loop Wrapper</th>
+              <th>NEXUS-1 Embodied Agent</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>Reasoning Engine</strong></td>
+              <td>Cloud API (high latency, recurring cost)</td>
+              <td><span class="badge-check">&#10003; 100% Offline Local LLM (Ollama)</span></td>
+            </tr>
+            <tr>
+              <td><strong>Verification</strong></td>
+              <td>Self-Reported ("LLM claims success")</td>
+              <td><span class="badge-check">&#10003; Raw Physics State (mjData.qpos)</span></td>
+            </tr>
+            <tr>
+              <td><strong>Error Handling</strong></td>
+              <td>Blind reprompting</td>
+              <td><span class="badge-check">&#10003; Exact 3D Metric Vector (&Delta;p) Compensation</span></td>
+            </tr>
+            <tr>
+              <td><strong>World State</strong></td>
+              <td>Resets every subtask (teleportation)</td>
+              <td><span class="badge-check">&#10003; Continuous Multi-Step State Persistence</span></td>
+            </tr>
+            <tr>
+              <td><strong>Ambiguity</strong></td>
+              <td>Silent random guessing</td>
+              <td><span class="badge-check">&#10003; Active Disambiguation Dialogs</span></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Quickstart Section -->
+    <div class="glass-card" id="quickstart">
+      <div class="section-title-group">
+        <div class="section-eyebrow">Developer Quickstart</div>
+        <h2 class="section-title">3 Steps to Run NEXUS-1 Locally</h2>
+      </div>
+
+      <div style="display: flex; flex-direction: column; gap: 16px;">
+        <div>
+          <strong>1. Clone &amp; Install Dependencies</strong>
+          <div class="code-card">
+git clone https://github.com/satyamshrivastav955-dotcom/language-to-action-robot-agent.git<br/>
+cd language-to-action-robot-agent<br/>
+pip install -r requirements.txt
+          </div>
+        </div>
+
+        <div>
+          <strong>2. Launch Local LLM (Ollama)</strong>
+          <div class="code-card">
+ollama pull qwen2.5:14b<br/>
+ollama serve
+          </div>
+        </div>
+
+        <div>
+          <strong>3. Execute Instructions</strong>
+          <div class="code-card">
+<span class="comment"># Single-step physical manipulation</span><br/>
+python run_agent.py "put the green block in the bin"<br/><br/>
+<span class="comment"># Multi-step sequential task with state composition</span><br/>
+python run_agent.py "put the green block in the bin, then stack red on yellow"<br/><br/>
+<span class="comment"># Launch Mission Control UI (Gradio 6)</span><br/>
+python dashboard/app.py
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <footer>
+    <div class="container">
+      <p class="footer-text">
+        <strong>NEXUS-1</strong> &bull; Autonomous Embodied AI Robotics Agent &bull; Developed by <a href="https://github.com/satyamshrivastav955-dotcom" target="_blank">Satyam Shrivastav</a> &bull; Licensed under MIT
+      </p>
+    </div>
+  </footer>
+
+</body>
+</html>
