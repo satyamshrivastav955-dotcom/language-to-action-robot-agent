@@ -1,0 +1,133 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 950 560" width="100%" height="100%">
+  <defs>
+    <!-- Background Gradient -->
+    <linearGradient id="termBg" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#0b101b"/>
+      <stop offset="100%" stop-color="#070a12"/>
+    </linearGradient>
+
+    <!-- Header Gradient -->
+    <linearGradient id="headerBg" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#141c2e"/>
+      <stop offset="100%" stop-color="#0f1624"/>
+    </linearGradient>
+
+    <filter id="termGlow" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="12" stdDeviation="16" flood-color="#000000" flood-opacity="0.8"/>
+    </filter>
+  </defs>
+
+  <style>
+    @keyframes blink {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0; }
+    }
+    @keyframes lineFade1 { 0% { opacity: 0; } 10%, 100% { opacity: 1; } }
+    @keyframes lineFade2 { 0%, 15% { opacity: 0; } 25%, 100% { opacity: 1; } }
+    @keyframes lineFade3 { 0%, 30% { opacity: 0; } 40%, 100% { opacity: 1; } }
+    @keyframes lineFade4 { 0%, 45% { opacity: 0; } 55%, 100% { opacity: 1; } }
+    @keyframes lineFade5 { 0%, 60% { opacity: 0; } 70%, 100% { opacity: 1; } }
+    @keyframes lineFade6 { 0%, 75% { opacity: 0; } 85%, 100% { opacity: 1; } }
+
+    .cursor { animation: blink 1s step-start infinite; }
+    .t-line-1 { animation: lineFade1 8s ease-in-out infinite; }
+    .t-line-2 { animation: lineFade2 8s ease-in-out infinite; }
+    .t-line-3 { animation: lineFade3 8s ease-in-out infinite; }
+    .t-line-4 { animation: lineFade4 8s ease-in-out infinite; }
+    .t-line-5 { animation: lineFade5 8s ease-in-out infinite; }
+    .t-line-6 { animation: lineFade6 8s ease-in-out infinite; }
+
+    .font-mono {
+      font-family: 'JetBrains Mono', 'Fira Code', 'SFMono-Regular', Menlo, Monaco, Consolas, monospace;
+    }
+  </style>
+
+  <!-- Outer Shadow & Card Frame -->
+  <rect x="15" y="15" width="920" height="530" rx="12" fill="url(#termBg)" stroke="#1e293b" stroke-width="1.5" filter="url(#termGlow)"/>
+
+  <!-- Top Title Bar -->
+  <rect x="15" y="15" width="920" height="42" rx="12" fill="url(#headerBg)"/>
+  <!-- Prevent bottom radius overlap -->
+  <rect x="15" y="45" width="920" height="12" fill="url(#headerBg)"/>
+  <line x1="15" y1="57" x2="935" y2="57" stroke="#1e293b" stroke-width="1"/>
+
+  <!-- Window Control Buttons (macOS style) -->
+  <circle cx="38" cy="36" r="6" fill="#ff5f56" stroke="#e0443e" stroke-width="0.5"/>
+  <circle cx="58" cy="36" r="6" fill="#ffbd2e" stroke="#dea123" stroke-width="0.5"/>
+  <circle cx="78" cy="36" r="6" fill="#27c93f" stroke="#1aab29" stroke-width="0.5"/>
+
+  <!-- Terminal Title -->
+  <text x="475" y="41" text-anchor="middle" class="font-mono" font-size="12" font-weight="600" fill="#94a3b8">
+    nexus1-agent@workstation: ~/language-to-action-robot-agent (Python 3.10 / MuJoCo 3.0)
+  </text>
+
+  <!-- Terminal Body Content -->
+  <g transform="translate(40, 90)" class="font-mono" font-size="12.5">
+    
+    <!-- Command Prompt Line -->
+    <g>
+      <text x="0" y="0" fill="#00ff88" font-weight="700">❯</text>
+      <text x="18" y="0" fill="#38bdf8" font-weight="600">python</text>
+      <text x="75" y="0" fill="#f8fafc">run_agent.py</text>
+      <text x="180" y="0" fill="#fbbf24">"put green in bin, then stack red on yellow"</text>
+    </g>
+
+    <!-- Banner & Initialization Output -->
+    <g class="t-line-1" transform="translate(0, 30)">
+      <text x="0" y="0" fill="#64748b">[INIT]</text>
+      <text x="55" y="0" fill="#cbd5e1">Connecting to Local LLM (Ollama &bull; qwen2.5:14b)...</text>
+      <text x="480" y="0" fill="#00ff88">&#10003; CONNECTED (0.12s)</text>
+      
+      <text x="0" y="22" fill="#64748b">[INIT]</text>
+      <text x="55" y="22" fill="#cbd5e1">Loading MuJoCo Scene (SO-101 6-DOF Manipulator)...</text>
+      <text x="480" y="22" fill="#00ff88">&#10003; 4 BODIES LOADED</text>
+    </g>
+
+    <!-- Plan Decomposition -->
+    <g class="t-line-2" transform="translate(0, 80)">
+      <text x="0" y="0" fill="#a855f7" font-weight="700">─── HIERARCHICAL TASK DECOMPOSITION ──────────────────────────────</text>
+      <text x="0" y="22" fill="#38bdf8">Plan Source:</text>
+      <text x="110" y="22" fill="#f8fafc">REAL_LLM (offline ollama/qwen2.5:14b)</text>
+      <text x="0" y="42" fill="#e2e8f0">Subtask 1: <tspan fill="#00ff88">pick_and_place</tspan>(object: <tspan fill="#34d399">"green_block"</tspan>, target: <tspan fill="#38bdf8">"bin"</tspan>)</text>
+      <text x="0" y="60" fill="#e2e8f0">Subtask 2: <tspan fill="#00ff88">stack</tspan>(object: <tspan fill="#f87171">"red_block"</tspan>, target: <tspan fill="#fbbf24">"yellow_block"</tspan>)</text>
+    </g>
+
+    <!-- Subtask 1 Execution & Verification -->
+    <g class="t-line-3" transform="translate(0, 168)">
+      <text x="0" y="0" fill="#00d4ff" font-weight="700">─── [SUBTASK 1/2] pick_and_place(green_block &rarr; bin) ─────────────</text>
+      <text x="0" y="22" fill="#94a3b8">Kinematics:</text>
+      <text x="100" y="22" fill="#cbd5e1">APPROACH &rarr; GRASP &rarr; LIFT &rarr; TRANSFER &rarr; RELEASE (11 phases)</text>
+      <text x="0" y="42" fill="#94a3b8">Physics State:</text>
+      <text x="110" y="42" fill="#e2e8f0">pos=[0.498, 0.002, 0.061] | target=[0.500, 0.000, 0.060]</text>
+      <text x="0" y="62" fill="#00ff88" font-weight="700">Tier-A Verifier:</text>
+      <text x="140" y="62" fill="#00ff88" font-weight="600">PASS (error: 0.003m &lt; 0.05m tolerance, in_bin: TRUE)</text>
+    </g>
+
+    <!-- Subtask 2 Execution & Adaptive Recovery -->
+    <g class="t-line-4" transform="translate(0, 256)">
+      <text x="0" y="0" fill="#f59e0b" font-weight="700">─── [SUBTASK 2/2] stack(red_block &rarr; yellow_block) ───────────────</text>
+      <text x="0" y="20" fill="#94a3b8">State Check:</text>
+      <text x="110" y="20" fill="#38bdf8">Preserved green_block inside bin &bull; World state intact</text>
+      <text x="0" y="38" fill="#f87171">Attempt 1:</text>
+      <text x="90" y="38" fill="#fca5a5">Contact jitter offset Δp = [-0.019, +0.006, 0.000] &rarr; RECOVERY TRIGGERED</text>
+      <text x="0" y="56" fill="#fbbf24">Diagnostic:</text>
+      <text x="90" y="56" fill="#fde68a">Adaptive compensation applied: offset_x=+0.019m</text>
+      <text x="0" y="74" fill="#00ff88" font-weight="700">Attempt 2:</text>
+      <text x="90" y="74" fill="#00ff88">PASS (stacked height: 0.080m, offset: 0.006m)</text>
+    </g>
+
+    <!-- Final Summary Line -->
+    <g class="t-line-5" transform="translate(0, 360)">
+      <rect x="-5" y="-14" width="870" height="34" rx="6" fill="#064e3b" fill-opacity="0.4" stroke="#059669" stroke-width="1"/>
+      <text x="10" y="8" fill="#00ff88" font-weight="700">✔ GOAL ACHIEVED</text>
+      <text x="140" y="8" fill="#a7f3d0">All 2/2 Subtasks Verified in MuJoCo Physics (Total: 4.82s)</text>
+      <text x="640" y="8" fill="#34d399">Trace: outputs/logs/run_01.jsonl</text>
+    </g>
+
+    <!-- Active Blinking Prompt -->
+    <g class="t-line-6" transform="translate(0, 410)">
+      <text x="0" y="0" fill="#00ff88" font-weight="700">❯</text>
+      <rect x="18" y="-12" width="8" height="15" fill="#00d4ff" class="cursor"/>
+    </g>
+  </g>
+</svg>

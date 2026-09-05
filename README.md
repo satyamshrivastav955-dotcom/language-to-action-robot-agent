@@ -1,35 +1,30 @@
----
-title: NEXUS-1 Robot Task Agent
-emoji: 🤖
-colorFrom: blue
-colorTo: indigo
-sdk: gradio
-app_file: app.py
-pinned: false
----
-
 <div align="center">
 
+<img src="assets/hero_banner.svg" width="100%" alt="NEXUS-1 Robot Task Agent Banner" />
+
+<br/>
+
 # 🤖 NEXUS-1: Language-to-Action Robot Agent
+### *Closed-Loop Hierarchical Embodied AI with Local LLMs, 6-DOF DLS Kinematics & Physics Verification in MuJoCo*
 
-### *Closed-Loop Hierarchical Embodied AI with Local LLMs & MuJoCo Physics*
-
-[![Python](https://img.shields.io/badge/Python-3.10%2B-blue.svg?logo=python&logoColor=white)](https://python.org)
-[![Physics](https://img.shields.io/badge/Physics-MuJoCo%203.0%2B-00d4ff.svg?logo=openai&logoColor=white)](https://mujoco.org)
+[![Python](https://img.shields.io/badge/Python-3.10%2B-3776AB.svg?logo=python&logoColor=white)](https://python.org)
+[![Physics Engine](https://img.shields.io/badge/Physics-MuJoCo%203.0%2B-00d4ff.svg?logo=openai&logoColor=white)](https://mujoco.org)
 [![Local LLM](https://img.shields.io/badge/Local%20LLM-Ollama%20(Qwen2.5%20%7C%20Llama3.1)-00ff88.svg?logo=ollama&logoColor=white)](https://ollama.com)
+[![Kinematics](https://img.shields.io/badge/Controller-6--DOF%20DLS%20IK-a855f7.svg)](https://github.com/satyamshrivastav955-dotcom/language-to-action-robot-agent)
 [![Dashboard](https://img.shields.io/badge/Interface-Gradio%206-ff7a00.svg?logo=gradio&logoColor=white)](https://gradio.app)
+[![Verification](https://img.shields.io/badge/Verification-Tier--A%20Physics%20Ground%20Truth-10b981.svg)](https://github.com/satyamshrivastav955-dotcom/language-to-action-robot-agent)
 [![License](https://img.shields.io/badge/License-MIT-purple.svg)](LICENSE)
 
 <br/>
 
-**[Quickstart](#-quickstart)** • **[Architecture](#-system-architecture)** • **[Key Features](#-core-capabilities)** • **[Mission Control UI](#-mission-control-dashboard)** • **[Engineering Disclosure](#-engineering-truth--disclosure)**
+**[⚡ Overview](#-overview)** • **[💡 The Core Problem](#-the-core-problem-why-nexus-1)** • **[🧠 Architecture](#-system-architecture)** • **[🚀 Quickstart](#-3-step-quickstart)** • **[🎛️ Mission Control UI](#-mission-control-dashboard)** • **[📊 Instruction Matrix](#-verified-instruction-matrix)** • **[🔬 Technical Deep-Dive](#-deep-technical-specifications)** • **[🔍 Engineering Disclosure](#-engineering-truth--disclosure)**
 
 <br/>
 
-<!-- Hero Animation -->
-<img src="outputs/demo.gif" width="750" alt="MuJoCo 6-DOF Robot Arm Manipulation" style="border-radius: 8px; border: 1px solid rgba(255,255,255,0.1); box-shadow: 0 8px 30px rgba(0,0,0,0.5);"/>
+<!-- Hero Manipulation Video / GIF -->
+<img src="outputs/demo.gif" width="850" alt="MuJoCo 6-DOF Robot Arm Manipulation" style="border-radius: 10px; border: 1px solid rgba(0, 212, 255, 0.3); box-shadow: 0 10px 40px rgba(0, 0, 0, 0.6);"/>
 
-*Real-time 6-DOF manipulator executing pick-and-place with live in-frame HUD telemetry.*
+<p><em>Real-time 6-DOF manipulator executing pick-and-place with live in-frame kinematic HUD telemetry in MuJoCo 3.0 physics.</em></p>
 
 </div>
 
@@ -37,169 +32,327 @@ pinned: false
 
 ## ⚡ Overview
 
-**NEXUS-1** is an autonomous language-to-action robotic agent that translates high-level natural language instructions into precise, multi-step physical manipulation in **MuJoCo physics**.
+**NEXUS-1** is an autonomous language-to-action robotic manipulation agent that bridges high-level natural language intent and low-level physical dynamics. Built on **MuJoCo physics**, an offline **local LLM reasoning engine (Ollama)**, and a **Damped Least-Squares (DLS) 6-DOF kinematic controller**, NEXUS-1 executes complex, multi-step manipulation tasks while maintaining continuous physical world state.
 
-Unlike open-loop prompt wrappers, NEXUS-1 implements a **closed-loop Perception-Reasoning-Execution-Verification-Recovery cycle**:
-1. **Decomposes** complex instructions into ordered subtasks using an **offline local LLM** (Ollama `qwen2.5:14b` or `llama3.1:8b`).
-2. **Executes** smooth end-effector trajectories with a 6-DOF DLS (Damped Least-Squares) kinematic controller.
-3. **Verifies** task outcomes directly from raw simulation physics state (`mjData`), not self-reported LLM claims.
-4. **Diagnoses & Recovers**: When a grasp slips or a drop drifts, the system computes the exact 3D metric miss vector $\Delta \mathbf{p}$ and dynamically adapts trajectory waypoints to succeed on retry.
-5. **Preserves State**: Multi-step instructions physically compose across subtasks without teleporting objects.
-
----
-
-## 🎛️ Mission Control Dashboard
-
-A cinematic, dark-themed command center built with **Gradio 6**, featuring live telemetry, task progress pulses, disambiguation dialogs, and video streams.
+Unlike open-loop prompt-and-pray architectures, NEXUS-1 executes a closed-loop **Perception &rarr; Reasoning &rarr; Kinematic Rollout &rarr; Physics Verification &rarr; Adaptive Vector Recovery** cycle.
 
 <div align="center">
-  <img src="outputs/dashboard.png" width="850" alt="NEXUS-1 Mission Control Dashboard" style="border-radius: 8px; border: 1px solid rgba(0, 212, 255, 0.2); box-shadow: 0 10px 40px rgba(0, 212, 255, 0.1);"/>
+  <img src="outputs/demo_strip.png" width="900" alt="Approach, Grasp, Transfer, and Release phases" style="border-radius: 8px; border: 1px solid rgba(255, 255, 255, 0.1);"/>
+  <p><em>4-Stage Physical Manipulation Breakdown: <b>APPROACH</b> &rarr; <b>GRASP</b> &rarr; <b>TRANSFER</b> &rarr; <b>RELEASE IN BIN</b></em></p>
 </div>
 
 ---
 
-## 🔄 Manipulation Sequence
+## 💡 The Core Problem: Why NEXUS-1?
+
+### *The Embodied AI Gap: Why Open-Loop LLM Prompting Fails in Robotics*
+
+Most LLM robotics demos wrap a prompt around an API and claim success based on the language model's self-generated text. In the physical world, this fails catastrophically:
+- **Zero Friction/Contact Awareness**: LLMs have no concept of inertial drift, grasping slippage, or contact collisions.
+- **Hallucinated Task Success**: LLMs report "Object successfully placed" even when the gripper misses by 10 cm or knocks over adjacent targets.
+- **Fragile Multi-Step Composition**: Standard agents reset the entire simulation environment between steps, teleporting objects and destroying sequential physical reality.
+
+### The NEXUS-1 Solution
+
+```
+High-Level Instruction ──> Local LLM Decomposition ──> DLS Kinematics ──> MuJoCo Forward Physics ──> mjData State Verification
+                                      ▲                                                                   │
+                                      └──────────── Metric Error Vector Feedback (Δp) ────────────────────┘
+```
+
+| Dimension | Traditional Open-Loop Wrapper | NEXUS-1 Embodied Agent |
+|:---|:---|:---|
+| **Reasoning Engine** | Cloud API (high latency, recurring cost, privacy leak) | **100% Offline Local LLM** (Ollama `qwen2.5:14b` / `llama3.1:8b`) |
+| **Verification** | Self-Reported ("LLM says it did it") | **Tier-A Physics State Probe** (`mjData.qpos` Ground Truth) |
+| **Failure Diagnosis** | Blind prompt re-roll | **Exact 3D Error Vector ($\Delta \mathbf{p} = \mathbf{p}_{\text{target}} - \mathbf{p}_{\text{actual}}$)** |
+| **Retry Controller** | Reprompts LLM or restarts world | **Adaptive waypoint offset compensation** |
+| **World State** | Environment resets each subtask (teleportation) | **Continuous multi-step physical state persistence** |
+| **Ambiguity Handling** | Silent random guessing | **Proactive interactive disambiguation dialogs** |
+
+---
+
+## 📺 Live Execution Terminal
+
+Experience the real-time execution flow of NEXUS-1 decomposing instructions, computing 6-DOF kinematics, probing physics states, and applying adaptive recovery:
 
 <div align="center">
-  <img src="outputs/demo_strip.png" width="850" alt="Approach, Grasp, Transfer, and Release phases" style="border-radius: 6px;"/>
-  <p><em>Left to Right: <b>APPROACH</b> &rarr; <b>GRASP</b> &rarr; <b>TRANSFER</b> &rarr; <b>RELEASE IN BIN</b></em></p>
+  <img src="assets/terminal_execution.svg" width="900" alt="NEXUS-1 Terminal Execution Simulation" style="border-radius: 10px;"/>
 </div>
 
 ---
 
 ## 🧠 System Architecture
 
-```mermaid
-flowchart TD
-    User["User Instruction<br/><i>'Put green in bin, then stack red on yellow'</i>"] --> Planner
-    
-    subgraph "Reasoning Layer (Offline LLM)"
-        Planner{"Ollama / Qwen2.5<br/>Task Planner"}
-        Planner -->|Ambiguous?| Clarify["Interactive Disambiguation Dialog"]
-        Planner -->|Valid Plan| Subtasks["Ordered Subtasks [T-01, T-02]"]
-    end
-    
-    subgraph "Execution & Physics Layer"
-        Subtasks --> Controller["DLS Inverse Kinematics Controller"]
-        Controller --> MuJoCo["MuJoCo 3.0 Simulation<br/>SO-101 6-DOF Arm"]
-    end
-    
-    subgraph "Verification & Recovery Loop"
-        MuJoCo --> Verifier{"Tier-A Physics Verifier<br/>(mjData Ground Truth)"}
-        Verifier -->|Success| Persist["Update World State & Advance"]
-        Verifier -->|Failure| Diagnostic["Error Vector Diagnostic<br/>Δp = p_target - p_actual"]
-        Diagnostic -->|Compensate| Controller
-    end
-    
-    Persist --> Complete["Task Sequence Complete"]
-```
+NEXUS-1 is structured into four decoupled, robust subsystems operating in a synchronized feedback loop:
+
+<div align="center">
+  <img src="assets/architecture_pipeline.svg" width="100%" alt="NEXUS-1 Architecture Pipeline" style="border-radius: 12px; border: 1px solid rgba(0, 212, 255, 0.2);"/>
+</div>
+
+### 1. Natural Language Reasoning & Semantic Disambiguation
+- Parses complex multi-step commands into structured subtask primitives (`pick_and_place`, `stack`, `push`).
+- Grounding engine maps free-form human tokens (*"the emerald cube"*, *"the container"*) to deterministic scene geoms.
+- **Active Disambiguation**: When instructions are under-specified (*"put the block in the bin"* when 4 blocks are present), the agent halts execution and asks a targeted question rather than guessing.
+
+### 2. 6-DOF Kinematic Motion Controller
+- Drives the SO-101 6-axis manipulator using a **Damped Least-Squares (DLS) Inverse Kinematics (IK)** solver:
+  $$\mathbf{J}^\dagger = \mathbf{J}^T (\mathbf{J} \mathbf{J}^T + \lambda^2 \mathbf{I})^{-1}$$
+- Generates smooth trajectories across 11 discrete phases: `IDLE` &rarr; `APPROACH` &rarr; `DESCEND` &rarr; `GRASP` &rarr; `LIFT` &rarr; `TRANSFER` &rarr; `ALIGN` &rarr; `DESCEND_TARGET` &rarr; `RELEASE` &rarr; `RETRACT` &rarr; `HOME`.
+
+### 3. MuJoCo 3.0 Dynamic Simulation
+- Full forward multi-body physics with collision meshes, friction cones, gravity, and joint torque limits.
+- Renders real-time camera views with in-frame HUD telemetry showing active phase, target coordinates, and joint velocities.
+
+### 4. Ground-Truth Physics Verifier & Adaptive Recovery
+- **Tier-A Verification**: Evaluates physical success directly from `mjData.qpos` coordinate bounds ($\delta \le 0.05\,\text{m}$ Euclidean threshold, bin boundary containment, and stacking stability $\Delta z \approx 0.04\,\text{m}$).
+- **Adaptive Miss-Vector Diagnostic**: On perturbation or placement miss, computes the delta vector $\Delta \mathbf{p} = \mathbf{p}_{\text{target}} - \mathbf{p}_{\text{actual}}$ and dynamically offsets the next attempt's waypoints.
 
 ---
 
-## 🌟 Core Capabilities
-
-| Feature | Description | Why It Matters |
-|:---|:---|:---|
-| 🧠 **100% Offline LLM** | Powered by local Ollama (`qwen2.5:14b` or `llama3.1:8b`) with native JSON formatting. | Zero API costs, runs on air-gapped workstations, no cloud dependencies. |
-| 🔄 **State Persistence** | World state persists across sequential subtasks with snapshot rollback. | Subtask 2 executes in the physical world left by Subtask 1 (e.g. red stays in bin while blue is stacked). |
-| 🎯 **Adaptive Error Recovery** | Measures coordinate miss vectors $\Delta \mathbf{p}$ to adjust retry waypoints. | Automatically converts attempt-1 perturbations into attempt-2 successes. |
-| 💬 **Active Disambiguation** | Detects semantic ambiguities (*"move the block"*) and asks questions rather than guessing. | Eliminates silent execution errors in partially specified goals. |
-| 📹 **In-Frame HUD Overlays** | Renders live kinematic phases (`APPROACH`, `GRASP`, `LIFT`, `RELEASE`) onto video frames. | Complete visual transparency for debugging and presentation. |
-
----
-
-## 🚀 Quickstart
+## 🚀 3-Step Quickstart
 
 ### 1. Clone & Install
 
 ```bash
+# Clone the repository
 git clone https://github.com/satyamshrivastav955-dotcom/language-to-action-robot-agent.git
 cd language-to-action-robot-agent
 
-# Install dependencies
+# Create virtual environment & install dependencies
+python -m venv env
+source env/bin/activate  # On Windows: .\env\Scripts\activate
 pip install -r requirements.txt
 ```
 
-### 2. Run Local LLM (Ollama)
+### 2. Launch Local LLM (Ollama)
 
 ```bash
-# Pull the model (one-time)
+# Pull your preferred local reasoning model
 ollama pull qwen2.5:14b
-# or: ollama pull llama3.1:8b
+# or lightweight: ollama pull llama3.1:8b
+
+# Ensure Ollama daemon is active (default: http://localhost:11434)
+ollama serve
 ```
 
-### 3. Run via CLI
+### 3. Execute an Instruction
 
 ```bash
-# Single subtask
+# Single-step physical manipulation
 python run_agent.py "put the green block in the bin"
 
-# Multi-step sequential task
+# Multi-step sequential task with state composition
 python run_agent.py "put the green block in the bin, then stack red on yellow"
 
-# Ambiguous instruction (agent will proactively clarify)
+# Ambiguous instruction (agent will actively prompt you for clarification)
 python run_agent.py "put the block in the bin"
 ```
 
-### 4. Launch Mission Control Dashboard
+---
+
+## 🎛️ Mission Control Dashboard
+
+NEXUS-1 includes a full-featured, dark-themed command center built with **Gradio 6**, featuring live telemetry, task progress tracking, interactive clarification modals, and multi-angle video playback.
 
 ```bash
+# Launch Mission Control UI
 python dashboard/app.py
 ```
-Open **`http://localhost:7860`** in your browser.
+*Open **`http://localhost:7860`** in your browser.*
+
+<div align="center">
+  <img src="outputs/dashboard.png" width="900" alt="NEXUS-1 Mission Control Dashboard" style="border-radius: 8px; border: 1px solid rgba(0, 212, 255, 0.25); box-shadow: 0 10px 40px rgba(0, 212, 255, 0.1);"/>
+</div>
 
 ---
 
-## 📋 Verified Instruction Matrix
+## 📊 Verified Instruction Matrix
 
-| Prompt | Type | Decomposed Actions | Expected Outcome |
+| Prompt | Execution Type | Decomposed Action Sequence | Physics Verification Criteria | Status |
+|:---|:---|:---|:---|:---:|
+| `"put the green block in the bin"` | **Single-Step** | `pick_and_place(green_block, bin)` | $\mathbf{p}_{\text{green}} \in \text{Bin Bounds}$, $z \ge 0.04\,\text{m}$ | `PASS` |
+| `"put red in bin, then stack blue on green"` | **Multi-Step** | `pick_and_place(red, bin)` &rarr; `stack(blue, green)` | `red` preserved in bin + `blue` resting on `green` ($\Delta z \approx 0.04\,\text{m}$) | `PASS` |
+| `"put green in bin, then stack red on yellow"` | **Multi-Step + Recovery** | `pick_and_place(green, bin)` &rarr; `stack(red, yellow)` | Attempt 1 diagnosed miss &rarr; Attempt 2 offset compensation &rarr; Success | `PASS` |
+| `"move the block to the bin"` | **Ambiguous** | *Disambiguation Triggered* | Proactively halts: *"There are 4 blocks on table. Which one?"* | `PASS` |
+
+---
+
+## 🔬 Deep Technical Specifications
+
+<details>
+<summary><b>📐 1. Damped Least-Squares (DLS) Inverse Kinematics Formulation</b></summary>
+
+<br/>
+
+The 6-DOF SO-101 manipulator calculates end-effector positional differential kinematics using a DLS Jacobian pseudo-inverse with Levenberg-Marquardt singularity damping:
+
+$$\Delta \boldsymbol{\theta} = \mathbf{J}^T (\mathbf{J} \mathbf{J}^T + \lambda^2 \mathbf{I})^{-1} \Delta \mathbf{x}$$
+
+Where:
+- $\mathbf{J} \in \mathbb{R}^{3 \times 6}$ is the positional Jacobian computed from raw `mjModel` joint screw axes.
+- $\Delta \mathbf{x} = \mathbf{x}_{\text{target}} - \mathbf{x}_{\text{current}}$ is the 3D Cartesian error vector.
+- $\lambda \in [0.01, 0.05]$ is the adaptive damping parameter preventing joint velocity explosion near kinematic singularities.
+- Joint limits $\boldsymbol{\theta}_{\min} \le \boldsymbol{\theta} \le \boldsymbol{\theta}_{\max}$ are enforced via clamp bounding at each integration step $dt = 0.002\,\text{s}$.
+
+</details>
+
+<details>
+<summary><b>🎯 2. Ground-Truth Verification & Error Diagnostic Formulas</b></summary>
+
+<br/>
+
+Unlike vision-only approximations, the Tier-A verifier queries exact Cartesian coordinates directly from the MuJoCo physics state buffer (`mjData.qpos`):
+
+1. **Euclidean Placement Tolerance**:
+   $$\|\mathbf{p}_{\text{object}} - \mathbf{p}_{\text{target}}\|_2 \le \epsilon_{\text{tol}} \quad (\epsilon_{\text{tol}} = 0.05\,\text{m})$$
+
+2. **Bin Interior Containment**:
+   $$x_{\min} \le x_{\text{object}} \le x_{\max}, \quad y_{\min} \le y_{\text{object}} \le y_{\max}, \quad z_{\text{object}} \ge 0.04\,\text{m}$$
+
+3. **Adaptive Miss-Vector Feedback**:
+   When an attempt fails due to target overshoot or collision drift:
+   $$\Delta \mathbf{p} = \mathbf{p}_{\text{target}} - \mathbf{p}_{\text{actual}}$$
+   $$\mathbf{w}_{\text{retry}} = \mathbf{w}_{\text{nominal}} + \alpha \cdot \Delta \mathbf{p} \quad (\alpha = 0.85)$$
+
+</details>
+
+<details>
+<summary><b>🧠 3. Structured LLM Plan Grammar & Disambiguation Protocol</b></summary>
+
+<br/>
+
+The reasoning engine strictly enforces structured JSON schema outputs from local models:
+
+```json
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "RobotTaskPlan",
+  "type": "object",
+  "properties": {
+    "subtasks": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {"type": "integer"},
+          "action": {"type": "string", "enum": ["pick_and_place", "stack", "push"]},
+          "object": {"type": "string", "enum": ["red_block", "blue_block", "green_block", "yellow_block"]},
+          "target": {"type": "string"}
+        },
+        "required": ["id", "action", "object", "target"]
+      }
+    },
+    "clarification_needed": {"type": "boolean"},
+    "question": {"type": "string"}
+  }
+}
+```
+
+</details>
+
+<details>
+<summary><b>📜 4. Structured JSONL Execution Trace Evidence Format</b></summary>
+
+<br/>
+
+Every execution session emits an immutable, auditable JSONL trace bundle in `outputs/logs/`:
+
+```json
+{
+  "timestamp": 1726053820.412,
+  "instruction": "put the green block in the bin, then stack red on yellow",
+  "plan_source": "REAL_LLM (ollama/qwen2.5:14b)",
+  "subtask_id": 1,
+  "action": "pick_and_place",
+  "object": "green_block",
+  "target": "bin",
+  "attempts": 1,
+  "kinematics": {
+    "phases_executed": 11,
+    "max_joint_velocity_rad_s": 1.42,
+    "final_ee_pos": [0.498, 0.002, 0.061]
+  },
+  "verification": {
+    "tier_a_verdict": "PASS",
+    "distance_error_m": 0.0031,
+    "in_bin_bounds": true,
+    "ground_truth_object_pos": [0.498, 0.002, 0.061]
+  },
+  "world_state_persisted": true
+}
+```
+
+</details>
+
+<details>
+<summary><b>🗺️ 5. MuJoCo Simulation World Coordinate Map</b></summary>
+
+<br/>
+
+Deterministic Cartesian spawn coordinates referenced in `configs/settings.py` and `env/scene.xml`:
+
+| Entity | Body Name | Cartesian Coordinates $(X, Y, Z)$ [m] | Color RGB |
 |:---|:---|:---|:---|
-| `"put the green block in the bin"` | Single-Step | `pick_and_place(green, bin)` | Green block placed inside bin (sub-cm accuracy) |
-| `"put red in bin, then stack blue on green"` | Multi-Step | `pick_and_place(red, bin)` &rarr; `stack(blue, green)` | Red stays in bin; Blue stacked on Green |
-| `"put green in bin, then stack red on yellow"` | Multi-Step + Recovery | `pick_and_place(green, bin)` &rarr; `stack(red, yellow)` | Autonomous vector-corrected retry on perturbation |
-| `"move the block to the bin"` | Ambiguous | *Clarification Triggered* | Prompts: *"There are 4 blocks on the table. Which one?"* |
+| 🔴 **Red Block** | `red_block` | $(0.28, +0.09, 0.04)$ | $(220, 50, 50)$ |
+| 🟢 **Green Block** | `green_block` | $(0.25, +0.03, 0.04)$ | $(50, 200, 50)$ |
+| 🟡 **Yellow Block** | `yellow_block` | $(0.22, -0.06, 0.04)$ | $(240, 200, 50)$ |
+| 🔵 **Blue Block** | `blue_block` | $(0.25, -0.12, 0.04)$ | $(50, 100, 220)$ |
+| 📥 **Target Bin** | `bin_body` | $(0.50, 0.00, 0.06)$ | $(120, 120, 120)$ |
+| 🎯 **Table Center** | `table` | $(0.35, 0.00, 0.04)$ | $(180, 180, 180)$ |
+
+</details>
 
 ---
 
 ## 🔍 Engineering Truth & Disclosure
 
-Honest engineering builds trust. Here is what is physics-simulated, and what is scripted:
+Honest engineering builds trust. Here is the exact technical reality of what is physics-simulated and what is deterministic:
 
-- **Physics Simulation (Real):** MuJoCo physics engine computes all forward dynamics, arm inertia, collisions, gravity, drop physics, and final resting poses. Success is verified directly from `mjData.qpos` and bounding-box coordinates.
-- **Hierarchical Planning (Real):** Natural language decomposition, ambiguity detection, and parameter compensation are handled live by the local LLM.
-- **Controller (Deterministic):** The 6-DOF arm is driven by a damped least-squares (DLS) inverse kinematics controller with 11 discrete phases, not an end-to-end learned policy.
-- **Grasp Assist (Disclosed):** Pure friction grasping of small rigid cubes in simulation is notoriously sensitive to solver contact damping. When the gripper closes around a block, proximity attach-assist stabilizes the carry phase, and hands the object back to physics for the release and drop.
+- **Physics Simulation (Real):** MuJoCo physics computes all forward dynamics, arm mass matrices, multi-body collisions, gravity, drop kinematics, and final resting poses. Success is verified from ground truth `mjData.qpos` positions.
+- **Hierarchical Planning (Real):** Natural language parsing, task decomposition, object grounding, and semantic ambiguity detection are performed live by local LLMs via Ollama.
+- **Kinematic Controller (Deterministic):** The 6-DOF arm is driven by a damped least-squares (DLS) IK waypoint controller across 11 discrete phases, ensuring repeatable geometric trajectories.
+- **Grasp Assist (Disclosed):** Pure friction grasping of small rigid objects in rigid-body contact solvers is notoriously sensitive to penalty stiffness and solver time steps. When the gripper reaches contact proximity with a block, proximity attach-assist stabilizes the carry phase, and returns the object to pure forward physics for release, dropping, and settling.
 
 ---
 
 ## 📂 Repository Structure
 
 ```text
+├── assets/
+│   ├── hero_banner.svg            # Animated GitHub hero header
+│   ├── architecture_pipeline.svg  # Animated closed-loop architecture diagram
+│   └── terminal_execution.svg     # Animated live terminal card
 ├── agent/
-│   ├── planner.py           # Multi-backend LLM planner (Ollama & Bedrock)
-│   ├── executor.py          # Waypoint kinematic controller & rollouts
-│   ├── verifier.py          # Ground-truth physics verifier
-│   ├── retry_controller.py  # Miss-vector diagnostic & adaptive parameter updates
-│   ├── state_manager.py     # Multi-step world state & memory tracking
-│   ├── task_agent.py        # Central orchestrator loop
-│   └── trace_logger.py      # Structured JSONL execution logger
+│   ├── planner.py                 # Multi-backend LLM planner (Ollama & Bedrock)
+│   ├── executor.py                # 6-DOF DLS kinematic controller & waypoint rollouts
+│   ├── verifier.py                # Tier-A physics ground truth verifier (mjData)
+│   ├── retry_controller.py        # Miss-vector diagnostic & adaptive parameter updates
+│   ├── state_manager.py           # Multi-step continuous world state tracker
+│   ├── task_agent.py              # Central orchestrator loop
+│   └── trace_logger.py            # Structured JSONL audit trail logger
 ├── configs/
-│   └── settings.py          # Workspace coordinates, model settings, & thresholds
+│   └── settings.py                # Workspace coordinates, model configs, & thresholds
 ├── dashboard/
-│   └── app.py               # Mission Control UI (Gradio 6)
+│   └── app.py                     # Mission Control UI (Gradio 6)
 ├── env/
-│   ├── scene.xml            # MuJoCo environment XML (Arm, Table, Blocks, Bin)
-│   └── so101_env.py         # Gymnasium-style MuJoCo environment wrapper
+│   ├── scene.xml                  # MuJoCo environment XML (Arm, Table, Blocks, Bin)
+│   └── so101_env.py               # Gymnasium-style MuJoCo environment wrapper
 ├── outputs/
-│   ├── demo.gif             # Animated manipulation demo
-│   ├── demo_strip.png       # Sequential phase strip
-│   └── dashboard.png        # UI screenshot
-├── requirements.txt         # Clean dependencies (boto3 optional)
-└── run_agent.py             # CLI runner
+│   ├── demo.gif                   # Hero manipulation GIF
+│   ├── demo_strip.png             # Sequential 4-phase breakdown
+│   ├── dashboard.png              # UI Mission Control screenshot
+│   └── logs/                      # JSONL execution trace bundles
+├── requirements.txt               # Streamlined dependencies
+└── run_agent.py                   # CLI entrypoint
 ```
 
 ---
 
 <div align="center">
-Built with ❤️ for <b>InnovaHack Chapter-1 — Domain 4: Agentic AI</b>
+
+**NEXUS-1** &bull; An Autonomous Embodied AI Engineering Project by **Satyam Shrivastav**
+
+[![GitHub](https://img.shields.io/badge/GitHub-Repository-181717.svg?logo=github&logoColor=white)](https://github.com/satyamshrivastav955-dotcom/language-to-action-robot-agent)
+[![License](https://img.shields.io/badge/License-MIT-purple.svg)](LICENSE)
+
 </div>

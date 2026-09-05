@@ -1,0 +1,284 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1100 640" width="100%" height="100%">
+  <defs>
+    <!-- Background Gradient -->
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#070b14"/>
+      <stop offset="50%" stop-color="#0e172a"/>
+      <stop offset="100%" stop-color="#050811"/>
+    </linearGradient>
+
+    <!-- Node Gradients -->
+    <linearGradient id="nodeInput" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#1e293b"/>
+      <stop offset="100%" stop-color="#0f172a"/>
+    </linearGradient>
+
+    <linearGradient id="nodeLLM" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0284c7" stop-opacity="0.2"/>
+      <stop offset="100%" stop-color="#0f172a"/>
+    </linearGradient>
+
+    <linearGradient id="nodeIK" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#8b5cf6" stop-opacity="0.2"/>
+      <stop offset="100%" stop-color="#0f172a"/>
+    </linearGradient>
+
+    <linearGradient id="nodePhysics" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#059669" stop-opacity="0.2"/>
+      <stop offset="100%" stop-color="#0f172a"/>
+    </linearGradient>
+
+    <linearGradient id="nodeRecovery" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#d97706" stop-opacity="0.2"/>
+      <stop offset="100%" stop-color="#0f172a"/>
+    </linearGradient>
+
+    <!-- Glowing Filters -->
+    <filter id="neonCyan" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="4" result="blur" />
+      <feComposite in="SourceGraphic" in2="blur" operator="over" />
+    </filter>
+
+    <filter id="neonGreen" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="4" result="blur" />
+      <feComposite in="SourceGraphic" in2="blur" operator="over" />
+    </filter>
+
+    <filter id="neonOrange" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="4" result="blur" />
+      <feComposite in="SourceGraphic" in2="blur" operator="over" />
+    </filter>
+
+    <!-- Marker Arrows -->
+    <marker id="arrowCyan" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+      <path d="M 1 1 L 7 4 L 1 7 Z" fill="#00d4ff"/>
+    </marker>
+    <marker id="arrowPurple" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+      <path d="M 1 1 L 7 4 L 1 7 Z" fill="#a855f7"/>
+    </marker>
+    <marker id="arrowGreen" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+      <path d="M 1 1 L 7 4 L 1 7 Z" fill="#00ff88"/>
+    </marker>
+    <marker id="arrowOrange" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+      <path d="M 1 1 L 7 4 L 1 7 Z" fill="#f59e0b"/>
+    </marker>
+  </defs>
+
+  <style>
+    @keyframes flowForward {
+      0% { stroke-dashoffset: 40; }
+      100% { stroke-dashoffset: 0; }
+    }
+    @keyframes signalPulse {
+      0%, 100% { transform: scale(1); opacity: 0.8; }
+      50% { transform: scale(1.08); opacity: 1; }
+    }
+    @keyframes feedbackLoop {
+      0% { stroke-dashoffset: 60; }
+      100% { stroke-dashoffset: 0; }
+    }
+    .flow-line-cyan {
+      stroke: #00d4ff;
+      stroke-width: 2;
+      stroke-dasharray: 6 4;
+      animation: flowForward 1.2s linear infinite;
+    }
+    .flow-line-purple {
+      stroke: #a855f7;
+      stroke-width: 2;
+      stroke-dasharray: 6 4;
+      animation: flowForward 1.2s linear infinite;
+    }
+    .flow-line-green {
+      stroke: #00ff88;
+      stroke-width: 2;
+      stroke-dasharray: 6 4;
+      animation: flowForward 1.2s linear infinite;
+    }
+    .flow-line-orange {
+      stroke: #f59e0b;
+      stroke-width: 2.5;
+      stroke-dasharray: 8 5;
+      animation: feedbackLoop 1.5s linear infinite;
+    }
+    .status-dot {
+      animation: signalPulse 2s ease-in-out infinite;
+    }
+  </style>
+
+  <!-- Container Box -->
+  <rect width="1096" height="636" x="2" y="2" rx="16" fill="url(#bgGrad)" stroke="#1e293b" stroke-width="1.5"/>
+
+  <!-- Pipeline Header -->
+  <g transform="translate(40, 36)">
+    <text x="0" y="0" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="20" font-weight="800" fill="#ffffff" letter-spacing="0.5">
+      NEXUS-1 CLOSED-LOOP REASONING &amp; EXECUTION PIPELINE
+    </text>
+    <text x="0" y="22" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="12" fill="#64748b">
+      Hierarchical LLM Decomposition &bull; DLS Inverse Kinematics &bull; MuJoCo Physics Ground Truth &bull; Metric Recovery
+    </text>
+  </g>
+
+  <!-- ================= STAGE 1: NATURAL LANGUAGE INPUT ================= -->
+  <g transform="translate(40, 95)">
+    <!-- Node Box -->
+    <rect width="210" height="210" rx="12" fill="url(#nodeInput)" stroke="#38bdf8" stroke-opacity="0.6" stroke-width="1.5"/>
+    <rect x="14" y="14" width="28" height="28" rx="6" fill="#38bdf8" fill-opacity="0.15"/>
+    <text x="21" y="33" font-family="sans-serif" font-size="14">💬</text>
+    <text x="50" y="32" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="13" font-weight="700" fill="#38bdf8">1. Natural Language</text>
+
+    <!-- Content -->
+    <rect x="14" y="56" width="182" height="65" rx="6" fill="#090d16" stroke="#1e293b"/>
+    <text x="22" y="75" font-family="ui-monospace, monospace" font-size="11" fill="#94a3b8">"put green in bin,</text>
+    <text x="22" y="93" font-family="ui-monospace, monospace" font-size="11" fill="#94a3b8"> then stack red</text>
+    <text x="22" y="111" font-family="ui-monospace, monospace" font-size="11" fill="#94a3b8"> on yellow"</text>
+
+    <!-- Disambiguation Check -->
+    <g transform="translate(14, 133)">
+      <rect width="182" height="62" rx="6" fill="#1e293b" fill-opacity="0.6"/>
+      <circle cx="14" cy="18" r="4" fill="#00ff88"/>
+      <text x="26" y="22" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="11" font-weight="600" fill="#e2e8f0">Ambiguity Guard</text>
+      <text x="12" y="44" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="10" fill="#94a3b8">Triggers Q&amp;A if target is</text>
+      <text x="12" y="56" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="10" fill="#94a3b8">under-specified.</text>
+    </g>
+  </g>
+
+  <!-- Arrow 1 -> 2 -->
+  <line x1="250" y1="200" x2="290" y2="200" class="flow-line-cyan" marker-end="url(#arrowCyan)"/>
+
+  <!-- ================= STAGE 2: OFFLINE LLM PLANNER ================= -->
+  <g transform="translate(300, 95)">
+    <rect width="230" height="210" rx="12" fill="url(#nodeLLM)" stroke="#00d4ff" stroke-width="1.5" filter="url(#neonCyan)"/>
+    <rect width="230" height="210" rx="12" fill="url(#nodeInput)" stroke="#00d4ff" stroke-width="1.2"/>
+    <rect x="14" y="14" width="28" height="28" rx="6" fill="#00d4ff" fill-opacity="0.15"/>
+    <text x="20" y="33" font-family="sans-serif" font-size="14">🧠</text>
+    <text x="50" y="32" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="13" font-weight="700" fill="#00d4ff">2. Local LLM Planner</text>
+
+    <!-- Model Spec -->
+    <rect x="14" y="54" width="202" height="42" rx="6" fill="#070b14" stroke="#00d4ff" stroke-opacity="0.3"/>
+    <text x="24" y="71" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="11" font-weight="700" fill="#38bdf8">Ollama Engine (Offline)</text>
+    <text x="24" y="86" font-family="ui-monospace, monospace" font-size="10" fill="#67e8f9">qwen2.5:14b | llama3.1:8b</text>
+
+    <!-- Plan Decomposition -->
+    <rect x="14" y="106" width="202" height="88" rx="6" fill="#070b14" stroke="#1e293b"/>
+    <text x="22" y="124" font-family="ui-monospace, monospace" font-size="10" fill="#a855f7">Structured JSON Plan:</text>
+    <text x="22" y="142" font-family="ui-monospace, monospace" font-size="10" fill="#e2e8f0">T-01: pick_place(G, Bin)</text>
+    <text x="22" y="158" font-family="ui-monospace, monospace" font-size="10" fill="#e2e8f0">T-02: stack(R, Y)</text>
+    <text x="22" y="178" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="9.5" fill="#10b981">&#10003; Grounded coordinates</text>
+  </g>
+
+  <!-- Arrow 2 -> 3 -->
+  <line x1="530" y1="200" x2="570" y2="200" class="flow-line-purple" marker-end="url(#arrowPurple)"/>
+
+  <!-- ================= STAGE 3: 6-DOF KINEMATICS & CONTROL ================= -->
+  <g transform="translate(580, 95)">
+    <rect width="230" height="210" rx="12" fill="url(#nodeIK)" stroke="#a855f7" stroke-width="1.5"/>
+    <rect x="14" y="14" width="28" height="28" rx="6" fill="#a855f7" fill-opacity="0.15"/>
+    <text x="20" y="33" font-family="sans-serif" font-size="14">⚙️</text>
+    <text x="50" y="32" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="13" font-weight="700" fill="#c084fc">3. Kinematic Controller</text>
+
+    <!-- DLS Math -->
+    <rect x="14" y="54" width="202" height="42" rx="6" fill="#070b14" stroke="#a855f7" stroke-opacity="0.3"/>
+    <text x="22" y="70" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="10.5" font-weight="700" fill="#e9d5ff">DLS Inverse Kinematics</text>
+    <text x="22" y="86" font-family="ui-monospace, monospace" font-size="9.5" fill="#a855f7">J* = J^T (J J^T + λ²I)⁻¹</text>
+
+    <!-- Phase Generator -->
+    <rect x="14" y="106" width="202" height="88" rx="6" fill="#070b14" stroke="#1e293b"/>
+    <text x="22" y="123" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="10.5" font-weight="700" fill="#cbd5e1">11-Phase Waypoint Rollout:</text>
+    <text x="22" y="141" font-family="ui-monospace, monospace" font-size="9.5" fill="#94a3b8">&bull; APPROACH &rarr; GRASP</text>
+    <text x="22" y="157" font-family="ui-monospace, monospace" font-size="9.5" fill="#94a3b8">&bull; LIFT &rarr; TRANSFER</text>
+    <text x="22" y="173" font-family="ui-monospace, monospace" font-size="9.5" fill="#94a3b8">&bull; ALIGN &rarr; RELEASE &rarr; RETRACT</text>
+  </g>
+
+  <!-- Arrow 3 -> 4 -->
+  <line x1="810" y1="200" x2="850" y2="200" class="flow-line-green" marker-end="url(#arrowGreen)"/>
+
+  <!-- ================= STAGE 4: MUJOCO PHYSICS SIMULATION ================= -->
+  <g transform="translate(860, 95)">
+    <rect width="200" height="210" rx="12" fill="url(#nodePhysics)" stroke="#00ff88" stroke-width="1.5" filter="url(#neonGreen)"/>
+    <rect width="200" height="210" rx="12" fill="url(#nodeInput)" stroke="#00ff88" stroke-width="1.2"/>
+    <rect x="14" y="14" width="28" height="28" rx="6" fill="#00ff88" fill-opacity="0.15"/>
+    <text x="20" y="33" font-family="sans-serif" font-size="14">🤖</text>
+    <text x="50" y="32" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="13" font-weight="700" fill="#00ff88">4. MuJoCo 3.0 Engine</text>
+
+    <!-- MuJoCo Features -->
+    <rect x="12" y="54" width="176" height="140" rx="6" fill="#070b14" stroke="#1e293b"/>
+    <text x="22" y="74" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="11" font-weight="700" fill="#a7f3d0">SO-101 Manipulator</text>
+    <text x="22" y="93" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="10" fill="#94a3b8">&bull; Forward Dynamics</text>
+    <text x="22" y="110" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="10" fill="#94a3b8">&bull; Mesh Collisions</text>
+    <text x="22" y="127" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="10" fill="#94a3b8">&bull; Gravity &amp; Drop Physics</text>
+    <text x="22" y="144" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="10" fill="#94a3b8">&bull; Live Video HUD Stream</text>
+    <text x="22" y="172" font-family="ui-monospace, monospace" font-size="9.5" fill="#34d399">mjData State Probing</text>
+  </g>
+
+  <!-- ================= LOWER SECTION: CLOSED-LOOP VERIFICATION & RECOVERY ================= -->
+
+  <!-- Line 4 down to Verification -->
+  <path d="M 960 305 L 960 380 L 850 380" fill="none" class="flow-line-green" marker-end="url(#arrowGreen)"/>
+
+  <!-- ================= STAGE 5: TIER-A PHYSICS VERIFIER ================= -->
+  <g transform="translate(560, 335)">
+    <rect width="280" height="135" rx="12" fill="url(#nodeInput)" stroke="#10b981" stroke-width="1.5"/>
+    <rect x="14" y="14" width="28" height="28" rx="6" fill="#10b981" fill-opacity="0.15"/>
+    <text x="20" y="33" font-family="sans-serif" font-size="14">🔍</text>
+    <text x="50" y="32" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="13" font-weight="700" fill="#34d399">5. Tier-A Physics Verifier</text>
+
+    <!-- Verifier details -->
+    <rect x="14" y="52" width="252" height="70" rx="6" fill="#070b14" stroke="#1e293b"/>
+    <text x="22" y="70" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="10.5" fill="#e2e8f0">&bull; Metric Distance: <tspan font-family="ui-monospace" fill="#38bdf8">||p_obj - p_target|| &lt; 0.05m</tspan></text>
+    <text x="22" y="88" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="10.5" fill="#e2e8f0">&bull; Bin Boundary Check: <tspan font-family="ui-monospace" fill="#38bdf8">z_pos &ge; 0.04m</tspan></text>
+    <text x="22" y="106" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="10.5" fill="#e2e8f0">&bull; Stacking Stability: <tspan font-family="ui-monospace" fill="#38bdf8">Δz ≈ 0.04m</tspan></text>
+  </g>
+
+  <!-- Pass Branch -> State Persistence -->
+  <path d="M 560 380 L 440 380" fill="none" class="flow-line-green" marker-end="url(#arrowGreen)"/>
+
+  <!-- ================= STAGE 6: STATE PERSISTENCE & SEQUENTIAL COMPOSITION ================= -->
+  <g transform="translate(200, 335)">
+    <rect width="230" height="135" rx="12" fill="url(#nodeInput)" stroke="#38bdf8" stroke-width="1.5"/>
+    <rect x="14" y="14" width="28" height="28" rx="6" fill="#38bdf8" fill-opacity="0.15"/>
+    <text x="20" y="33" font-family="sans-serif" font-size="14">🔄</text>
+    <text x="50" y="32" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="13" font-weight="700" fill="#38bdf8">6. State Persistence</text>
+
+    <!-- Details -->
+    <rect x="14" y="52" width="202" height="70" rx="6" fill="#070b14" stroke="#1e293b"/>
+    <text x="22" y="70" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="10.5" fill="#34d399">&#10003; Subtask 1 Success</text>
+    <text x="22" y="88" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="10" fill="#94a3b8">World state preserved</text>
+    <text x="22" y="104" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="10" fill="#38bdf8">&rarr; Advance to Subtask 2</text>
+  </g>
+
+  <!-- Advance arrow looping back to Kinematics for Next Subtask -->
+  <path d="M 315 335 L 315 320 L 510 320 L 510 230 L 570 230" fill="none" stroke="#38bdf8" stroke-width="1.5" stroke-dasharray="4 4"/>
+
+  <!-- Fail Branch -> Miss-Vector Diagnostic -->
+  <path d="M 700 470 L 700 520 L 770 520" fill="none" class="flow-line-orange" marker-end="url(#arrowOrange)"/>
+
+  <!-- ================= STAGE 7: ADAPTIVE MISS-VECTOR RECOVERY ================= -->
+  <g transform="translate(780, 480)">
+    <rect width="280" height="135" rx="12" fill="url(#nodeRecovery)" stroke="#f59e0b" stroke-width="1.5" filter="url(#neonOrange)"/>
+    <rect width="280" height="135" rx="12" fill="url(#nodeInput)" stroke="#f59e0b" stroke-width="1.2"/>
+    <rect x="14" y="14" width="28" height="28" rx="6" fill="#f59e0b" fill-opacity="0.15"/>
+    <text x="20" y="33" font-family="sans-serif" font-size="14">🎯</text>
+    <text x="50" y="32" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="13" font-weight="700" fill="#fbbf24">7. Miss-Vector Recovery</text>
+
+    <!-- Math & Correction -->
+    <rect x="14" y="52" width="252" height="70" rx="6" fill="#070b14" stroke="#f59e0b" stroke-opacity="0.4"/>
+    <text x="22" y="70" font-family="ui-monospace, monospace" font-size="10.5" fill="#fbbf24">Δp = p_target - p_actual</text>
+    <text x="22" y="88" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="10" fill="#94a3b8">Waypoint Offset: <tspan font-family="ui-monospace" fill="#67e8f9">p_new = p_old + α·Δp</tspan></text>
+    <text x="22" y="106" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="10" fill="#f59e0b">Dynamic retry without teleportation</text>
+  </g>
+
+  <!-- Closed-loop feedback from Recovery back to Kinematic Controller -->
+  <path d="M 780 560 L 550 560 L 550 250 L 570 250" fill="none" class="flow-line-orange" marker-end="url(#arrowOrange)"/>
+  <rect x="560" y="545" width="160" height="24" rx="12" fill="#1e293b" stroke="#f59e0b" stroke-width="1"/>
+  <text x="572" y="561" font-family="ui-monospace, monospace" font-size="10" font-weight="700" fill="#fbbf24">Adaptive Retry Feedback</text>
+
+  <!-- Success Terminal Output Badge -->
+  <g transform="translate(40, 520)">
+    <rect width="180" height="75" rx="10" fill="#064e3b" fill-opacity="0.3" stroke="#059669" stroke-width="1.2"/>
+    <circle cx="20" cy="22" r="5" fill="#00ff88" class="status-dot"/>
+    <text x="32" y="26" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="11" font-weight="700" fill="#34d399">GOAL SATISFACTION</text>
+    <text x="14" y="48" font-family="ui-monospace, monospace" font-size="10" fill="#a7f3d0">All subtasks passed</text>
+    <text x="14" y="64" font-family="ui-monospace, monospace" font-size="10" fill="#6ee7b7">Trace written to JSONL</text>
+  </g>
+</svg>

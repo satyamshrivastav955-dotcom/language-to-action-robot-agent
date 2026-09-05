@@ -47,8 +47,8 @@ def main():
     os.makedirs(LOGS_DIR, exist_ok=True)
 
     print("=" * 60)
-    print("ROBOT TASK AGENT")
-    print("InnovaHack Chapter-1 - Domain 4: Agentic AI")
+    print("NEXUS-1: LANGUAGE-TO-ACTION ROBOT AGENT")
+    print("Closed-Loop Hierarchical Embodied AI & Physics Verification")
     print("=" * 60)
     print(f"\nInstruction: {args.instruction}")
     print(f"Max retries: {args.retries}")
