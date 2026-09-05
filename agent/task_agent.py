@@ -18,7 +18,7 @@ from typing import Callable, Dict, Generator, List, Optional
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from agent.planner import Planner
+from agent.planner import create_planner
 from agent.executor import Executor
 from agent.verifier import Verifier
 from agent.retry_controller import RetryController
@@ -51,7 +51,7 @@ class RobotTaskAgent:
                  console_output: bool = True, env=None):
         self.env = env if env is not None else create_environment()
 
-        self.planner = Planner()
+        self.planner = create_planner()
         self.executor = Executor(env=self.env, use_mock_policy=use_mock_policy)
         self.verifier = Verifier(self.env, enable_vlm=enable_vlm_verifier)
         self.retry_controller = RetryController()
@@ -215,7 +215,9 @@ class RobotTaskAgent:
                 stopped_early = True
                 break
 
-        self.env.reset()
+        # Deliberately no env.reset() here: the final world state stays
+        # readable after the run (the dashboard and any post-run inspection
+        # see the scene the instruction actually produced).
         elapsed_time = time.time() - start_time
 
         summary = self.state_manager.get_summary()
@@ -273,12 +275,20 @@ class RobotTaskAgent:
         attempts = 0
         video_path = None
 
+        # Snapshot the world as this subtask found it. A failed attempt is
+        # rewound to THIS state - not to a factory-reset scene - so retries
+        # do not destroy the work of earlier subtasks in the same instruction.
+        pre_subtask_state = self.env.save_state()
+
         for attempt in range(1, max_retries + 1):
             if self._stop_requested:
                 break
 
             attempts = attempt
             view[index]["attempts"] = attempt
+
+            if attempt > 1:
+                self.env.restore_state(pre_subtask_state)
 
             # Diagnosis from the previous failure feeds the next attempt.
             retry_params = self.retry_controller.get_adjusted_parameters(subtask, attempt)

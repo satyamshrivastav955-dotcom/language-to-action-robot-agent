@@ -1,6 +1,6 @@
 import numpy as np
 import os
-from typing import Dict, Optional, Tuple
+from typing import Dict, Optional
 import base64
 import cv2
 
@@ -291,9 +291,7 @@ def create_verifier(env, enable_vlm: bool = False) -> Verifier:
 
 if __name__ == "__main__":
     print("Testing Verifier...")
-    
-    import sys
-    sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
     from env.so101_env import SO101Environment
     
     env = SO101Environment()

@@ -1,5 +1,5 @@
 import os
-from typing import Dict, Optional, Tuple
+from typing import Dict, Optional
 import time
 
 import sys
@@ -99,7 +99,6 @@ class RetryController:
             base_params["last_failure"] = last_failure
 
             if "grasp" in last_failure:
-                base_params["approach_adjustment"] = "earlier_gripper_close"
                 base_params["speed_factor"] = 0.8
             elif "placement" in last_failure:
                 base_params["speed_factor"] = 0.9
@@ -115,63 +114,6 @@ class RetryController:
             self.retry_history[subtask_id] = []
         else:
             self.retry_history = {}
-
-
-class RetryDiagnostic:
-    
-    FAILURE_TYPES = {
-        "grasp_failure": {
-            "severity": "high",
-            "recovery_likelihood": 0.7,
-            "recommended_actions": ["adjust_approach", "slow_down"],
-        },
-        "grasp_slip": {
-            "severity": "medium",
-            "recovery_likelihood": 0.6,
-            "recommended_actions": ["tighten_grip", "slow_transport"],
-        },
-        "large_placement_error": {
-            "severity": "high",
-            "recovery_likelihood": 0.5,
-            "recommended_actions": ["recalibrate", "check_sensors"],
-        },
-        "moderate_placement_error": {
-            "severity": "medium",
-            "recovery_likelihood": 0.8,
-            "recommended_actions": ["refine_motion"],
-        },
-        "minor_placement_error": {
-            "severity": "low",
-            "recovery_likelihood": 0.9,
-            "recommended_actions": ["slight_adjustment"],
-        },
-        "timing_issue": {
-            "severity": "low",
-            "recovery_likelihood": 0.85,
-            "recommended_actions": ["adjust_timing"],
-        },
-    }
-    
-    @classmethod
-    def classify(cls, verification: Dict) -> str:
-        reason = verification.get("reason", "").lower()
-        
-        if "grasp" in reason and "failed" in reason:
-            return "grasp_failure"
-        if "slip" in reason:
-            return "grasp_slip"
-        if "large margin" in reason:
-            return "large_placement_error"
-        if "moderate margin" in reason:
-            return "moderate_placement_error"
-        if "close" in reason:
-            return "minor_placement_error"
-        
-        return "unknown"
-    
-    @classmethod
-    def get_recommended_action(cls, failure_type: str) -> list:
-        return cls.FAILURE_TYPES.get(failure_type, {}).get("recommended_actions", [])
 
 
 def create_retry_controller(max_retries: int = MAX_RETRIES_PER_SUBTASK) -> RetryController:

@@ -57,6 +57,24 @@ class MockSO101Environment:
         self._step_count = 0
         return self._get_observation()
 
+    def save_state(self) -> Dict:
+        """Snapshot of the world, for retry rollback (see restore_state)."""
+        return {
+            "object_positions": {k: v.copy() for k, v in self._object_positions.items()},
+            "joint_positions": self._joint_positions.copy(),
+        }
+
+    def restore_state(self, state: Dict):
+        """Rewind the world to a save_state() snapshot.
+
+        Used by the retry loop: a failed subtask is re-attempted from the state
+        it started in, NOT from a factory-reset scene, so earlier subtasks'
+        completed work is preserved across the retry.
+        """
+        self._object_positions = {k: v.copy()
+                                  for k, v in state["object_positions"].items()}
+        self._joint_positions = state["joint_positions"].copy()
+
     def _get_observation(self) -> np.ndarray:
         return self._joint_positions.copy()
 
@@ -133,7 +151,8 @@ class MockSO101Environment:
             return base_pos
         return np.array(TARGET_REGIONS["table_center"], dtype=float)
 
-    def render(self, width: int = 640, height: int = 480, **kwargs) -> np.ndarray:
+    def render(self, width: int = 640, height: int = 480,
+               phase: Optional[str] = None, **kwargs) -> np.ndarray:
         # **kwargs tolerates stray callers (e.g. render(timeout=...)) rather
         # than raising TypeError mid-rollout.
         self._frame_count += 1
@@ -298,6 +317,51 @@ class SO101Environment(MockSO101Environment):
         self._step_count = 0
         return self._get_observation()
 
+    def save_state(self) -> Dict:
+        if not self.is_physics_backed:
+            return super().save_state()
+        return {
+            "qpos": self.data.qpos.copy(),
+            "qvel": self.data.qvel.copy(),
+            "ctrl": self.data.ctrl.copy(),
+            "grasped": self._grasped,
+            "grasp_offset": self._grasp_offset.copy(),
+        }
+
+    def restore_state(self, state: Dict):
+        if not self.is_physics_backed:
+            return super().restore_state(state)
+        self.data.qpos[:] = state["qpos"]
+        self.data.qvel[:] = state["qvel"]
+        self.data.ctrl[:] = state["ctrl"]
+        self._grasped = state["grasped"]
+        self._grasp_offset = state["grasp_offset"].copy()
+        mujoco.mj_forward(self.model, self.data)
+
+    def reset_arm(self):
+        """Re-home the arm only; every block stays exactly where it is.
+
+        Used between subtasks of one instruction: the WORLD persists (that is
+        the point of multi-step composition) while the arm starts each pick
+        from its canonical configuration. Driving the arm home through
+        physics instead is path-dependent - the wrist can jam against the
+        forearm partway - and any residual joint error reseeds the IK into a
+        different solution branch, so the subtask becomes unrepeatable.
+        """
+        if not self.is_physics_backed:
+            self._joint_positions = self.home_position_rad.copy()
+            return
+
+        home = self._home_arm_pose()
+        for adr, val in zip(self._arm_qpos_adr, home):
+            self.data.qpos[adr] = val
+        for adr in self._arm_dof_adr:
+            self.data.qvel[adr] = 0.0
+        self.data.ctrl[:6] = home
+        self.data.ctrl[6:8] = self.GRIPPER_OPEN
+        self._grasped = None
+        mujoco.mj_forward(self.model, self.data)
+
     def _home_arm_pose(self) -> np.ndarray:
         """Home pose in radians, from HOME_POSITION_DEG in settings.
 
@@ -444,7 +508,7 @@ class SO101Environment(MockSO101Environment):
     # ------------------------------------------------------------------
 
     def solve_ik(self, target_xyz, iterations: int = 260,
-                 tol: float = 2e-3) -> np.ndarray:
+                 tol: float = 2e-3, seed=None) -> np.ndarray:
         """Joint angles putting grip_site at target_xyz, gripper pointing down.
 
         Damped least squares on the site Jacobian, solving position AND
@@ -452,6 +516,16 @@ class SO101Environment(MockSO101Environment):
         wrist settles at an arbitrary tilt, the finger pads no longer straddle
         the block along their slide axis, and every grasp shoves the block away
         instead of closing on it.
+
+        The solve starts from the LIVE arm pose, which makes consecutive
+        solves chain: each phase's solution seeds the next, so the whole
+        rollout stays in one solution branch. That is why the scripted plan
+        begins with a joint-space home retract - it anchors the chain at the
+        same canonical configuration every subtask, no matter where the
+        previous subtask parked the arm. (DLS converges to the branch nearest
+        its seed; seeded from a post-placement pose with the wrist near +-pi
+        it finds a flipped elbow/wrist branch that the physical arm cannot
+        track through its own geometry.)
 
         Runs on a scratch MjData so it never disturbs live simulation state.
         """
@@ -461,6 +535,9 @@ class SO101Environment(MockSO101Environment):
         target = np.asarray(target_xyz, dtype=float)
         scratch = mujoco.MjData(self.model)
         scratch.qpos[:] = self.data.qpos
+        if seed is not None:
+            for adr, val in zip(self._arm_qpos_adr, np.asarray(seed, dtype=float)):
+                scratch.qpos[adr] = val
         mujoco.mj_forward(self.model, scratch)
 
         jacp = np.zeros((3, self.model.nv))
@@ -511,9 +588,10 @@ class SO101Environment(MockSO101Environment):
     # ------------------------------------------------------------------
 
     def render(self, width: int = 640, height: int = 480,
-               camera: str = "camera1", **kwargs) -> np.ndarray:
+               camera: str = "camera1", phase: Optional[str] = None,
+               **kwargs) -> np.ndarray:
         if not self.is_physics_backed:
-            return super().render(width=width, height=height, **kwargs)
+            return super().render(width=width, height=height, phase=phase, **kwargs)
 
         try:
             if self._renderer is None or self._renderer_size != (height, width):
@@ -522,9 +600,33 @@ class SO101Environment(MockSO101Environment):
                 self._renderer = mujoco.Renderer(self.model, height, width)
                 self._renderer_size = (height, width)
 
-            self._renderer.update_scene(self.data, camera=camera)
+            # Build a free-look camera with a 3/4-view over the workspace.
+            # distance=1.2 keeps the whole arm in frame; azimuth=-45 gives
+            # the classic 3/4 perspective; elevation=-25 looks slightly down
+            # so the table, blocks and gripper are all visible at once.
+            cam = mujoco.MjvCamera()
+            cam.type = mujoco.mjtCamera.mjCAMERA_FREE
+            cam.distance = 1.2
+            cam.azimuth = -45.0
+            cam.elevation = -25.0
+
+            self._renderer.update_scene(self.data, camera=cam)
             frame = self._renderer.render()
             self._frame_count += 1
+
+            # Phase overlay: slim dark bar at the top with the phase name in
+            # cyan so operators can follow the rollout at a glance.
+            if phase and frame is not None:
+                frame = frame.copy()
+                label = phase.upper().replace('_', ' ')
+                # Dark semi-transparent bar at top
+                overlay = frame.copy()
+                cv2.rectangle(overlay, (0, 0), (frame.shape[1], 28), (0, 0, 0), -1)
+                cv2.addWeighted(overlay, 0.6, frame, 0.4, 0, frame)
+                # Phase text in cyan-ish color
+                cv2.putText(frame, label, (8, 20), cv2.FONT_HERSHEY_SIMPLEX,
+                            0.55, (0, 212, 255), 1, cv2.LINE_AA)
+
             return frame
         except Exception as e:
             # Headless boxes without a GL backend still get a usable run.
@@ -532,8 +634,7 @@ class SO101Environment(MockSO101Environment):
                 print(f"[SO101Env] Render unavailable ({type(e).__name__}: {e}) "
                       f"- falling back to 2D frames")
             self.load_error = f"render: {e}"
-            self.is_physics_backed_render = False
-            return super().render(width=width, height=height, **kwargs)
+            return super().render(width=width, height=height, phase=phase, **kwargs)
 
     def close(self):
         if self._renderer is not None:

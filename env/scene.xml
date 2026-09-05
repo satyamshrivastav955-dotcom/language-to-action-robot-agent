@@ -27,21 +27,21 @@
     <geom name="table" type="box" size="0.5 0.4 0.01" pos="0.35 0 0.01" rgba="0.55 0.45 0.35 1"/>
 
     <!-- Blocks: real free bodies so they can be grasped, lifted and dropped. -->
-    <body name="red_block" pos="0.25 0.1 0.04">
+    <body name="red_block" pos="0.28 0.09 0.04">
       <freejoint name="red_block_free"/>
       <geom name="red_block_geom" type="box" size="0.02 0.02 0.02" rgba="0.85 0.2 0.2 1" mass="0.05"/>
     </body>
-    <body name="blue_block" pos="0.25 -0.1 0.04">
-      <freejoint name="blue_block_free"/>
-      <geom name="blue_block_geom" type="box" size="0.02 0.02 0.02" rgba="0.2 0.4 0.85 1" mass="0.05"/>
-    </body>
-    <body name="green_block" pos="0.15 0.1 0.04">
+    <body name="green_block" pos="0.25 0.03 0.04">
       <freejoint name="green_block_free"/>
       <geom name="green_block_geom" type="box" size="0.02 0.02 0.02" rgba="0.2 0.75 0.2 1" mass="0.05"/>
     </body>
-    <body name="yellow_block" pos="0.15 -0.1 0.04">
+    <body name="yellow_block" pos="0.22 -0.06 0.04">
       <freejoint name="yellow_block_free"/>
       <geom name="yellow_block_geom" type="box" size="0.02 0.02 0.02" rgba="0.95 0.8 0.2 1" mass="0.05"/>
+    </body>
+    <body name="blue_block" pos="0.25 -0.12 0.04">
+      <freejoint name="blue_block_free"/>
+      <geom name="blue_block_geom" type="box" size="0.02 0.02 0.02" rgba="0.2 0.4 0.85 1" mass="0.05"/>
     </body>
 
     <!-- Bin. Floor top sits at z=0.04 so a resting block centres at z=0.06,

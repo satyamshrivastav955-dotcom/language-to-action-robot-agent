@@ -1,8 +1,7 @@
 import numpy as np
-import torch
 import os
 import time
-from typing import Dict, Optional, List, Tuple
+from typing import Dict, Optional, List
 import cv2
 import imageio
 
@@ -95,6 +94,11 @@ class ScriptedMuJoCoPolicy:
     GRASP_Z_OFFSET = 0.005
     CARRY_Z = 0.24
     RELEASE_Z = 0.13
+    # Joint-velocity norm (rad/s, summed over the 6 arm DOFs) below which the
+    # arm counts as still. At the end of "lower" the measured norm is ~50, so
+    # this is roughly two orders of magnitude down - low enough that opening
+    # the gripper no longer imparts a kick to the block underneath it.
+    SETTLE_SPEED = 1.0
 
     def __init__(self, env, settle_steps: int = 14):
         self.env = env
@@ -154,8 +158,23 @@ class ScriptedMuJoCoPolicy:
              "grip": 1.0, "steps": 20},
             {"name": "lower", "xyz": [place[0], place[1], release_z],
              "grip": 1.0, "steps": 55},
+            # Hold the lowered pose, gripper still closed, until the arm stops
+            # moving. The position controller reaches the target with a large
+            # residual joint velocity still in the links; if the gripper opens
+            # and the arm retreats while that energy is present, the open
+            # fingers clip the just-placed block and fling it across the table.
+            # How hard it gets clipped is chaotic - it depends on the exact
+            # velocity phase, which differs between a first pick and a second
+            # one - so a fixed settle count is unreliable; we wait on measured
+            # joint velocity instead. See get_action's "settle" branch.
+            # "hold" means: keep the joint targets lower ended on. Re-solving
+            # IK here would throw away lower's closed-loop correction and
+            # command the raw goal again, which walks the arm ~2cm back off
+            # the target while the block is still gripped.
+            {"name": "settle", "xyz": [place[0], place[1], release_z],
+             "grip": 1.0, "steps": 60, "settle": True, "hold": True},
             {"name": "release", "xyz": [place[0], place[1], release_z],
-             "grip": 0.0, "steps": 40},
+             "grip": 0.0, "steps": 40, "hold": True},
             # Retreat lifts straight up from wherever the release actually
             # happened; a sideways move here drags the just-placed block.
             {"name": "retreat", "xyz": [place[0], place[1], self.CARRY_Z],
@@ -174,7 +193,7 @@ class ScriptedMuJoCoPolicy:
         phase = self._plan[min(self._idx, len(self._plan) - 1)]
 
         # Cache IK per phase - solving every step is wasteful and jitters.
-        if self._phase_step == 0:
+        if self._phase_step == 0 and not phase.get("hold"):
             if phase.get("vertical_from_release"):
                 here = self.env.get_end_effector_pose()
                 phase["xyz"] = [float(here[0]), float(here[1]), self.CARRY_Z]
@@ -186,9 +205,6 @@ class ScriptedMuJoCoPolicy:
         # the placement phases, re-solve from where the arm ACTUALLY is and
         # correct the residual instead of trusting the one-shot solution.
         elif phase["name"] == "lower" and self._phase_step % 6 == 0:
-            # Re-read the stack target too: it may have been nudged since the
-            # plan was built, and placing on its stale pose drops the block
-            # onto empty table.
             goal = np.asarray(phase["xyz"], dtype=float)
             # Deliberately NOT re-reading the stack target here. Tracking it
             # during descent becomes a shove: the carried block nudges the
@@ -202,11 +218,31 @@ class ScriptedMuJoCoPolicy:
 
         self._phase_step += 1
 
-        if self._phase_step >= phase["steps"] and self._idx < len(self._plan) - 1:
+        # The settle phase is the one phase with a data-driven end: it holds
+        # until the arm is measurably still, and its step count is only an
+        # upper bound. Everything else runs its full fixed budget.
+        done = self._phase_step >= phase["steps"]
+        if phase.get("settle") and self._phase_step >= 12 and not done:
+            done = self._arm_speed() < self.SETTLE_SPEED
+
+        if done and self._idx < len(self._plan) - 1:
             self._idx += 1
             self._phase_step = 0
 
         return np.append(self._cached_q[:6], phase["grip"])
+
+    def _arm_speed(self) -> float:
+        """Joint-velocity norm over the 6 arm DOFs, or 0.0 without physics.
+
+        The mock environment has no qvel; returning 0 there makes the settle
+        phase exit at its minimum hold, which is the right behaviour when
+        there is no physics to settle.
+        """
+        data = getattr(self.env, "data", None)
+        adr = getattr(self.env, "_arm_dof_adr", None)
+        if data is None or adr is None:
+            return 0.0
+        return float(np.linalg.norm([data.qvel[a] for a in adr]))
 
     def is_done(self) -> bool:
         last = self._idx >= len(self._plan) - 1
@@ -216,79 +252,6 @@ class ScriptedMuJoCoPolicy:
         if not self._plan:
             return "idle"
         return self._plan[min(self._idx, len(self._plan) - 1)]["name"]
-
-
-class SmolVLAPolicy:
-    
-    def __init__(self, model_path: str = "lerobot/smolvla_base", device: str = "cuda"):
-        self.model_path = model_path
-        self.device = device
-        self.model = None
-        self.processor = None
-        self._load_model()
-    
-    def _load_model(self):
-        try:
-            from transformers import AutoModelForVision2Seq, AutoProcessor
-            
-            print(f"[SmolVLA] Loading model from {self.model_path}...")
-            self.model = AutoModelForVision2Seq.from_pretrained(
-                self.model_path,
-                trust_remote_code=True,
-                torch_dtype=torch.float32
-            )
-            self.processor = AutoProcessor.from_pretrained(
-                self.model_path,
-                trust_remote_code=True
-            )
-            self.model.to(self.device)
-            self.model.eval()
-            print("[SmolVLA] Model loaded successfully")
-        except Exception as e:
-            print(f"[SmolVLA] Failed to load real model: {e}")
-            print("[SmolVLA] Falling back to mock policy")
-            self.model = None
-            self.processor = None
-    
-    @classmethod
-    def from_pretrained(cls, model_path: str = "lerobot/smolvla_base", device: str = "cuda"):
-        return cls(model_path=model_path, device=device)
-    
-    def get_action(self, observation: np.ndarray, image: np.ndarray, language_prompt: str) -> np.ndarray:
-        if self.model is None:
-            return self._mock_action(observation)
-        
-        try:
-            inputs = self.processor(
-                images=image,
-                text=language_prompt,
-                return_tensors="pt"
-            )
-            inputs = {k: v.to(self.device) for k, v in inputs.items()}
-            
-            with torch.no_grad():
-                outputs = self.model.generate(**inputs, max_length=50)
-            
-            action = self.processor.decode(outputs[0], skip_special_tokens=True)
-            return self._parse_action(action)
-        except Exception as e:
-            print(f"[SmolVLA] Inference error: {e}")
-            return self._mock_action(observation)
-    
-    def _mock_action(self, observation: np.ndarray) -> np.ndarray:
-        base_angles = np.array(HOME_POSITION_DEG) * np.pi / 180.0
-        perturbation = np.random.randn(6) * 0.02
-        return base_angles + perturbation
-    
-    def _parse_action(self, action_str: str) -> np.ndarray:
-        try:
-            numbers = [float(x) for x in action_str.replace("[", "").replace("]", "").split(",")]
-            return np.array(numbers[:6])
-        except (ValueError, AttributeError):
-            return np.array(HOME_POSITION_DEG) * np.pi / 180.0
-    
-    def reset(self):
-        pass
 
 
 class Executor:
@@ -310,19 +273,18 @@ class Executor:
             self.policy_type = "mock"
         elif getattr(self.env, "is_physics_backed", False):
             # Real run + real physics: drive the arm with the waypoint
-            # controller so outcomes come from contact, not a coin flip.
+            # controller. The trajectory is hand-written; the outcome is
+            # still determined by the simulation, not predetermined.
             self.policy = ScriptedMuJoCoPolicy(self.env)
             self.policy_type = "scripted_sim"
             print("[Executor] Using scripted MuJoCo waypoint controller "
                   "(physics-determined outcomes)")
         else:
-            try:
-                self.policy = SmolVLAPolicy.from_pretrained()
-                self.policy_type = "real"
-            except Exception as e:
-                print(f"[Executor] Could not load SmolVLA ({type(e).__name__}: {e}); using mock policy")
-                self.policy = MockSmolVLAPolicy()
-                self.policy_type = "mock"
+            # No physics available and mock not requested: fall back to the
+            # mock policy rather than pretending a learned policy exists.
+            print("[Executor] MuJoCo unavailable; falling back to mock policy")
+            self.policy = MockSmolVLAPolicy()
+            self.policy_type = "mock"
 
         self.current_frames: List[np.ndarray] = []
         self.video_path: Optional[str] = None
@@ -360,13 +322,13 @@ class Executor:
         loaded = getattr(self.policy, "model", None) is not None
         return {
             "type": "real",
-            "name": getattr(self.policy, "model_path", "smolvla"),
-            # A SmolVLAPolicy whose load failed silently falls back to noise
-            # actions, which is scripted-adjacent - say so rather than claiming
-            # a real policy is driving.
+            "name": getattr(self.policy, "model_path", "external"),
+            # An externally supplied policy whose load failed silently falls
+            # back to noise actions, which is scripted-adjacent - say so
+            # rather than claiming a real policy is driving.
             "outcomes_are_scripted": not loaded,
             "weights_loaded": loaded,
-            "note": ("Real policy driving the rollout." if loaded else
+            "note": ("Externally supplied policy driving the rollout." if loaded else
                      "Model weights failed to load; actions are home-position noise."),
         }
 
@@ -396,7 +358,17 @@ class Executor:
         self._prev_obs = None
         self._settled_steps = 0
 
-        self.env.reset()
+        # NOTE: no env.reset() here. The environment is reset once per
+        # instruction by RobotTaskAgent.run; each subtask continues from the
+        # world state the previous one produced, so multi-step instructions
+        # genuinely compose ("put red in bin, THEN stack blue on green" runs
+        # subtask 2 with red still in the bin). Retries of a failed subtask
+        # are rewound by the caller via env.restore_state, not by a factory
+        # reset. Only the ARM is re-homed between subtasks (blocks untouched):
+        # each pick starts from the canonical configuration, like a real
+        # manipulation cell returning to home between jobs.
+        if hasattr(self.env, "reset_arm"):
+            self.env.reset_arm()
 
         if self.policy_type == "mock" and hasattr(self.policy, 'begin_attempt'):
             self.policy.begin_attempt(retry_params)
@@ -413,8 +385,9 @@ class Executor:
 
         if self.policy_type == "scripted_sim":
             # The waypoint plan needs its full length to finish the place; a
-            # short max_steps would cut the arm off mid-carry.
-            effective_steps = max(effective_steps, 300)
+            # short max_steps would cut the arm off mid-carry. 360 covers the
+            # full 11-phase plan (~307 steps) with margin.
+            effective_steps = max(effective_steps, 360)
 
         for step in range(effective_steps):
             if self.policy_type == "real":
@@ -425,12 +398,9 @@ class Executor:
 
             obs, reward, done, info = self.env.step(action_cmd)
 
-            # Render every other step: physics needs fine substeps, but a
-            # frame per step makes the video long and the run slow.
-            if self.policy_type != "scripted_sim" or step % 2 == 0:
-                frame = self.env.render()
-                if frame is not None:
-                    self.current_frames.append(frame)
+            frame = self.env.render(phase=self.policy.current_phase() if hasattr(self.policy, 'current_phase') else None)
+            if frame is not None:
+                self.current_frames.append(frame)
 
             if self.policy_type == "scripted_sim":
                 if self.policy.is_done():
@@ -508,13 +478,7 @@ class Executor:
 
         return self._settled_steps >= 5
     
-    def capture_frame(self):
-        frame = self.env.render()
-        if frame is not None:
-            self.current_frames.append(frame)
-        return frame
-    
-    def _save_video(self, name: str, fps: int = 30) -> Optional[str]:
+    def _save_video(self, name: str, fps: int = 25) -> Optional[str]:
         from configs.settings import VIDEOS_DIR
 
         if not self.current_frames:
@@ -562,6 +526,7 @@ if __name__ == "__main__":
     print("Testing Executor...")
     
     executor = create_executor(use_mock_policy=True)
+    executor.env.reset()
     
     test_subtask = {
         "id": 1,
