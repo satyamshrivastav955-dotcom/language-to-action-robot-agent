@@ -11,6 +11,11 @@ LOGS_DIR = os.path.join(OUTPUTS_DIR, "logs")
 BEDROCK_MODEL_ID = os.environ.get("BEDROCK_MODEL_ID", "zai.glm-5")
 BEDROCK_REGION = os.environ.get("AWS_DEFAULT_REGION", "eu-north-1")
 
+# Offline LLM backend (default)
+LLM_BACKEND = os.environ.get("LLM_BACKEND", "ollama")  # "ollama" | "bedrock"
+OLLAMA_MODEL = os.environ.get("OLLAMA_MODEL", "qwen2.5:14b")
+OLLAMA_HOST = os.environ.get("OLLAMA_HOST", "http://localhost:11434")
+
 # Vision model used by the --vlm-verify second opinion. Separate from
 # BEDROCK_MODEL_ID because the planner's model need not be multimodal.
 VLM_MODEL_ID = os.environ.get("VLM_MODEL_ID", BEDROCK_MODEL_ID)
@@ -53,10 +58,10 @@ BIN_MIN_HEIGHT = 0.04
 BLOCK_SIZE = 0.04
 
 BLOCK_START_POSITIONS: Dict[str, Tuple[float, float, float]] = {
-    "red_block": (0.25, 0.1, 0.04),
-    "blue_block": (0.25, -0.1, 0.04),
-    "green_block": (0.15, 0.1, 0.04),
-    "yellow_block": (0.15, -0.1, 0.04),
+    "red_block": (0.28, 0.09, 0.04),
+    "green_block": (0.25, 0.03, 0.04),
+    "yellow_block": (0.22, -0.06, 0.04),
+    "blue_block": (0.25, -0.12, 0.04),
 }
 
 OBJECT_COLORS: Dict[str, Tuple[int, int, int]] = {

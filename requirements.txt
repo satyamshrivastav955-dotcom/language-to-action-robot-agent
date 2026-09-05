@@ -1,14 +1,19 @@
-boto3>=1.28.0
-torch>=2.0.0
-transformers>=4.35.0
+# HTTP client — used by OllamaPlanner (also a transitive dep of gradio)
+requests>=2.31.0
+
+# Physics + control
+mujoco>=3.0.0
+numpy>=1.24.0
+
+# Video capture
 opencv-python>=4.8.0
 imageio>=2.31.0
-numpy>=1.24.0
-pillow>=10.0.0
-huggingface-hub>=0.19.0
-safetensors>=0.4.0
-accelerate>=0.24.0
-einops>=0.7.0
+imageio-ffmpeg>=0.4.9
 
-gradio>=4.0.0
-mujoco>=3.0.0
+# Dashboard
+gradio>=6.0.0
+
+# ---------------------------------------------------------------------------
+# Optional: AWS Bedrock backend (set LLM_BACKEND=bedrock)
+# pip install boto3
+# ---------------------------------------------------------------------------
