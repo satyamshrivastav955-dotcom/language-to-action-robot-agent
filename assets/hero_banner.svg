@@ -1,4 +1,5 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 380" width="100%" height="100%">
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 380" width="1200" height="380">
   <defs>
     <!-- Background Gradients -->
     <linearGradient id="bgGradient" x1="0%" y1="0%" x2="100%" y2="100%">
@@ -11,12 +12,6 @@
     <linearGradient id="cyanBlueGrad" x1="0%" y1="0%" x2="100%" y2="0%">
       <stop offset="0%" stop-color="#00f2fe"/>
       <stop offset="100%" stop-color="#4facfe"/>
-    </linearGradient>
-
-    <linearGradient id="neonGlowGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#00d4ff"/>
-      <stop offset="50%" stop-color="#7928ca"/>
-      <stop offset="100%" stop-color="#ff0080"/>
     </linearGradient>
 
     <linearGradient id="borderGrad" x1="0%" y1="0%" x2="100%" y2="100%">
@@ -53,24 +48,10 @@
       0%, 100% { opacity: 0.6; filter: drop-shadow(0 0 15px rgba(0,212,255,0.4)); }
       50% { opacity: 0.95; filter: drop-shadow(0 0 25px rgba(0,212,255,0.8)); }
     }
-    @keyframes scanline {
-      0% { transform: translateY(-100px); opacity: 0; }
-      50% { opacity: 0.6; }
-      100% { transform: translateY(400px); opacity: 0; }
-    }
     @keyframes floatParticle {
       0%, 100% { transform: translateY(0px) translateX(0px); opacity: 0.3; }
       50% { transform: translateY(-15px) translateX(10px); opacity: 0.8; }
     }
-    @keyframes radarSpin {
-      from { transform: rotate(0deg); }
-      to { transform: rotate(360deg); }
-    }
-    @keyframes beamSweep {
-      0% { x1: -100; x2: 0; }
-      100% { x1: 1200; x2: 1300; }
-    }
-    .pulse-text { animation: pulseGlow 4s ease-in-out infinite; }
     .floating-p1 { animation: floatParticle 6s ease-in-out infinite; }
     .floating-p2 { animation: floatParticle 8s ease-in-out infinite 1.5s; }
     .floating-p3 { animation: floatParticle 7s ease-in-out infinite 3s; }
@@ -103,7 +84,7 @@
     <text x="32" y="21" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-size="12" font-weight="700" fill="#00d4ff" letter-spacing="1.5">AUTONOMOUS EMBODIED ROBOTICS</text>
   </g>
 
-  <!-- GitHub Stars / Portfolio Tag Pill (Right) -->
+  <!-- Status / Portfolio Tag Pill (Right) -->
   <g transform="translate(840, 42)">
     <rect width="300" height="32" rx="16" fill="#111827" stroke="#374151" stroke-width="1"/>
     <text x="24" y="21" font-family="ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace" font-size="12" font-weight="600" fill="#9ca3af">PHYSICS-GROUNDED AGENT</text>
@@ -111,7 +92,7 @@
     <text x="244" y="20" font-family="ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace" font-size="10" font-weight="700" fill="#00ff88">v2.4</text>
   </g>
 
-  <!-- Central Title & Brand -->
+  <!-- Central Title &amp; Brand -->
   <g transform="translate(60, 150)">
     <!-- Icon Symbol -->
     <g transform="translate(0, -35)">
@@ -127,7 +108,7 @@
 
     <!-- Subtitle / Elevator Hook -->
     <text x="94" y="38" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', 'Inter', Roboto, sans-serif" font-size="17" font-weight="400" fill="#94a3b8" letter-spacing="0.2">
-      Closed-Loop Hierarchical Embodied AI &bull; Local LLM Planning &bull; 6-DOF DLS Kinematics &bull; MuJoCo Physics Verification
+      Closed-Loop Hierarchical Embodied AI &#8226; Local LLM Planning &#8226; 6-DOF DLS Kinematics &#8226; MuJoCo Physics Verification
     </text>
   </g>
 
@@ -137,7 +118,7 @@
     <g transform="translate(0, 0)">
       <rect width="250" height="60" rx="10" fill="#0f172a" stroke="#1e293b" stroke-width="1.2"/>
       <rect x="14" y="14" width="32" height="32" rx="8" fill="#00d4ff" fill-opacity="0.1"/>
-      <text x="24" y="35" font-family="sans-serif" font-size="16">🧠</text>
+      <text x="24" y="35" font-family="sans-serif" font-size="16">&#129504;</text>
       <text x="56" y="29" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="13" font-weight="700" fill="#f8fafc">100% Offline LLMs</text>
       <text x="56" y="46" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="11" fill="#64748b">Ollama Qwen2.5 / Llama3.1</text>
     </g>
@@ -146,7 +127,7 @@
     <g transform="translate(270, 0)">
       <rect width="260" height="60" rx="10" fill="#0f172a" stroke="#1e293b" stroke-width="1.2"/>
       <rect x="14" y="14" width="32" height="32" rx="8" fill="#00ff88" fill-opacity="0.1"/>
-      <text x="24" y="35" font-family="sans-serif" font-size="16">⚡</text>
+      <text x="24" y="35" font-family="sans-serif" font-size="16">&#9889;</text>
       <text x="56" y="29" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="13" font-weight="700" fill="#f8fafc">Tier-A Physics Verifier</text>
       <text x="56" y="46" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="11" fill="#64748b">Direct mjData State Probing</text>
     </g>
@@ -155,16 +136,16 @@
     <g transform="translate(550, 0)">
       <rect width="260" height="60" rx="10" fill="#0f172a" stroke="#1e293b" stroke-width="1.2"/>
       <rect x="14" y="14" width="32" height="32" rx="8" fill="#a855f7" fill-opacity="0.1"/>
-      <text x="24" y="35" font-family="sans-serif" font-size="16">🎯</text>
+      <text x="24" y="35" font-family="sans-serif" font-size="16">&#127919;</text>
       <text x="56" y="29" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="13" font-weight="700" fill="#f8fafc">Adaptive Miss Recovery</text>
-      <text x="56" y="46" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="11" fill="#64748b">Δp Metric Vector Correction</text>
+      <text x="56" y="46" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="11" fill="#64748b">&#916;p Metric Vector Correction</text>
     </g>
 
     <!-- Chip 4: State Persistence -->
     <g transform="translate(830, 0)">
       <rect width="250" height="60" rx="10" fill="#0f172a" stroke="#1e293b" stroke-width="1.2"/>
       <rect x="14" y="14" width="32" height="32" rx="8" fill="#f59e0b" fill-opacity="0.1"/>
-      <text x="24" y="35" font-family="sans-serif" font-size="16">🔄</text>
+      <text x="24" y="35" font-family="sans-serif" font-size="16">&#128260;</text>
       <text x="56" y="29" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="13" font-weight="700" fill="#f8fafc">State Persistence</text>
       <text x="56" y="46" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="11" fill="#64748b">Multi-Step Object Comp.</text>
     </g>

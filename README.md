@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="assets/hero_banner.svg" width="100%" alt="NEXUS-1 Robot Task Agent Banner" />
+<img src="./assets/hero_banner.svg" width="100%" alt="NEXUS-1 Robot Task Agent Banner" />
 
 <br/>
 
@@ -76,7 +76,7 @@ High-Level Instruction ──> Local LLM Decomposition ──> DLS Kinematics �
 Experience the real-time execution flow of NEXUS-1 decomposing instructions, computing 6-DOF kinematics, probing physics states, and applying adaptive recovery:
 
 <div align="center">
-  <img src="assets/terminal_execution.svg" width="900" alt="NEXUS-1 Terminal Execution Simulation" style="border-radius: 10px;"/>
+  <img src="./assets/terminal_execution.svg" width="900" alt="NEXUS-1 Terminal Execution Simulation" style="border-radius: 10px;"/>
 </div>
 
 ---
@@ -86,7 +86,7 @@ Experience the real-time execution flow of NEXUS-1 decomposing instructions, com
 NEXUS-1 is structured into four decoupled, robust subsystems operating in a synchronized feedback loop:
 
 <div align="center">
-  <img src="assets/architecture_pipeline.svg" width="100%" alt="NEXUS-1 Architecture Pipeline" style="border-radius: 12px; border: 1px solid rgba(0, 212, 255, 0.2);"/>
+  <img src="./assets/architecture_pipeline.svg" width="100%" alt="NEXUS-1 Architecture Pipeline" style="border-radius: 12px; border: 1px solid rgba(0, 212, 255, 0.2);"/>
 </div>
 
 ### 1. Natural Language Reasoning & Semantic Disambiguation
