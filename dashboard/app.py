@@ -1,407 +1,213 @@
-"""Gradio front-end for the Language-to-Action Robot Agent.
+"""Gradio front-end: type an instruction, watch the closed loop work.
+
+    python -m dashboard.app          (needs `pip install -e ".[dashboard]"`)
+
+One robot, one run at a time: a second submit gets a "busy" message instead of
+corrupting the simulation. The agent is built per run, so changing a setting
+(fault profile, verifier, retry strategy) takes effect on the next run.
 """
 
+import html
 import os
-import sys
-from typing import Dict, Generator, List
+import threading
+from typing import Dict, List, Optional
 
 import gradio as gr
 
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-
-from agent.task_agent import RobotTaskAgent
 from agent.planner import create_planner
-from configs.settings import (
-    MAX_RETRIES_PER_SUBTASK,
-    MAX_STEPS_PER_ROLLOUT,
-    VIDEOS_DIR,
-)
+from agent.task_agent import RobotTaskAgent
+from configs.settings import MAX_RETRIES_PER_SUBTASK, VIDEOS_DIR
+from env.faults import PROFILES
+from env.so101_env import create_environment
 
-# Initialize agent
-agent = RobotTaskAgent(use_mock_policy=False, console_output=False)
+_LOCK = threading.Lock()
+_STATE: Dict[str, object] = {"env": None, "planner": None, "agent": None}
 
-# Get backend info
-backend_name = getattr(agent.planner, 'backend_name', 'OLLAMA/QWEN2.5:14B')
-policy_info = agent.executor.describe_policy()
-policy_name = "Mock Policy" if policy_info.get("outcomes_are_scripted") else "MuJoCo Physics"
-model_id = getattr(agent.planner, 'model', getattr(agent.planner, 'model_id', 'qwen2.5:14b'))
+FAULT_CHOICES = [(f"{p.name} - {p.description}", p.name) for p in PROFILES.values()]
+VERIFIER_CHOICES = [("Camera (pixels only)", "perception"), ("Ground truth (oracle)", "oracle"),
+                    ("None (trust the rollout)", "none")]
+RETRY_CHOICES = [("Corrected: use the measured error", "corrected"), ("Blind: repeat", "blind")]
+EXAMPLES = [
+    "put the red block in the bin",
+    "stack the blue block on the green block",
+    "put the green block in the bin, then stack red on yellow",
+    "put the block in the bin",
+]
 
-# Custom CSS for the PRO MAX UI
-css = """
-body, .gradio-container {
-    background-color: #0a0a0f !important;
-    color: #e0e0e0 !important;
-    font-family: 'Inter', sans-serif !important;
-}
-.gradio-container {
-    max-width: 1400px !important;
-}
-.panel, .gr-box, .gr-panel, .gr-block {
-    background-color: #111118 !important;
-    border: 1px solid rgba(255, 255, 255, 0.08) !important;
-    border-radius: 4px !important;
-}
-button {
-    border-radius: 4px !important;
-    text-transform: uppercase !important;
-    font-family: 'Courier New', monospace !important;
-    font-weight: bold !important;
-}
-.btn-execute {
-    background-color: #00d4ff !important;
-    color: #0a0a0f !important;
-    border: none !important;
-}
-.btn-abort {
-    background-color: transparent !important;
-    color: #ff4444 !important;
-    border: 1px solid #ff4444 !important;
-}
-.header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 15px;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-    margin-bottom: 20px;
-}
-.header-title {
-    font-family: 'Courier New', monospace;
-    font-size: 1.5em;
-    font-weight: bold;
-    color: #fff;
-    margin: 0;
-}
-.header-subtitle {
-    font-family: 'Courier New', monospace;
-    font-size: 0.8em;
-    color: rgba(255, 255, 255, 0.5);
-    margin: 0;
-}
-.live-dot {
-    width: 10px;
-    height: 10px;
-    background-color: #00ff88;
-    border-radius: 50%;
-    display: inline-block;
-    animation: pulse 1.5s infinite;
-    margin-right: 10px;
-}
-@keyframes pulse {
-    0% { box-shadow: 0 0 0 0 rgba(0, 255, 136, 0.7); }
-    70% { box-shadow: 0 0 0 10px rgba(0, 255, 136, 0); }
-    100% { box-shadow: 0 0 0 0 rgba(0, 255, 136, 0); }
-}
-.status-row {
-    display: flex;
-    gap: 15px;
-    font-family: 'Courier New', monospace;
-    font-size: 0.8em;
-    color: #00d4ff;
-    padding: 10px;
-    background: rgba(0, 212, 255, 0.05);
-    border: 1px solid rgba(0, 212, 255, 0.2);
-    border-radius: 4px;
-    margin-top: 10px;
-}
-.task-row {
-    display: flex;
-    align-items: center;
-    padding: 10px;
-    border: 1px solid rgba(255, 255, 255, 0.08);
-    margin-bottom: 8px;
-    background: #111118;
-    border-radius: 4px;
-    font-family: 'Courier New', monospace;
-}
-.task-badge {
-    padding: 2px 6px;
-    background: rgba(255,255,255,0.1);
-    border-radius: 2px;
-    margin-right: 15px;
-    font-size: 0.8em;
-}
-.task-action {
-    font-weight: bold;
-    color: #00d4ff;
-    min-width: 150px;
-    display: inline-block;
-    letter-spacing: 0.5px;
-}
-.task-obj {
-    flex-grow: 1;
-    color: rgba(255, 255, 255, 0.85);
-    margin: 0 10px;
-}
-.task-status {
-    min-width: 140px;
-    text-align: right;
-    font-weight: bold;
-}
-.status-pending { color: rgba(255, 255, 255, 0.3); }
-.status-in_progress { color: #00d4ff; animation: text-pulse 1.5s infinite; }
-.status-completed { color: #00ff88; }
-.status-failed { color: #ff4444; }
-@keyframes text-pulse {
-    0% { opacity: 1; }
-    50% { opacity: 0.5; }
-    100% { opacity: 1; }
-}
-.progress-bar-container {
-    height: 2px;
-    background: rgba(255, 255, 255, 0.1);
-    width: 100%;
-    margin-top: 5px;
-}
-.progress-bar {
-    height: 100%;
-    background: #00d4ff;
-    width: 0%;
-    transition: width 0.3s;
-}
-.clarification-banner {
-    background: rgba(255, 184, 0, 0.1);
-    border-left: 4px solid #ffb800;
-    padding: 15px;
-    margin-bottom: 15px;
-    font-family: 'Inter', sans-serif;
-}
-.log-container textarea {
-    font-family: 'Courier New', monospace !important;
-    background-color: #050508 !important;
-    color: #00d4ff !important;
-    border: 1px solid rgba(255, 255, 255, 0.08) !important;
-}
-.footer-stats {
-    display: flex;
-    justify-content: space-between;
-    padding: 10px 15px;
-    font-family: 'Courier New', monospace;
-    font-size: 0.85em;
-    border-top: 1px solid rgba(255, 255, 255, 0.08);
-    color: rgba(255, 255, 255, 0.5);
-    background-color: #111118;
-    margin-top: 20px;
-}
-.stat-value {
-    color: #fff;
-    font-weight: bold;
-}
-.stat-success { color: #00ff88; }
-.stat-failed { color: #ff4444; }
+CSS = """
+.gradio-container { max-width: 1240px !important; margin: auto; }
+.rl-head h1 { font-size: 1.45rem; margin: 0 0 4px; letter-spacing: -0.01em; }
+.rl-head p { margin: 0; opacity: .72; }
+.rl-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 12px; }
+.rl-chip { font-size: .76rem; font-weight: 600; padding: 3px 10px; border-radius: 99px;
+           border: 1px solid var(--border-color-primary); background: var(--block-background-fill); }
+.rl-card { border: 1px solid var(--border-color-primary); border-radius: 12px; padding: 12px 14px;
+           margin-bottom: 10px; background: var(--block-background-fill); }
+.rl-card .t { display: flex; justify-content: space-between; gap: 10px; font-weight: 650; }
+.rl-badge { font-size: .74rem; font-weight: 700; padding: 2px 9px; border-radius: 99px; border: 1px solid; }
+.rl-badge.pending { opacity: .55; } .rl-badge.in_progress { color: var(--color-accent); }
+.rl-badge.completed { color: #2fa36b; } .rl-badge.failed { color: #d9534f; }
+.rl-atts { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 9px; }
+.rl-att { font-size: .8rem; padding: 3px 9px; border-radius: 8px; border: 1px solid var(--border-color-primary); }
+.rl-att b.ok { color: #2fa36b; } .rl-att b.bad { color: #d9534f; }
+.rl-att small { opacity: .65; }
+.rl-empty { opacity: .6; padding: 18px; text-align: center; }
+.rl-ask { border-left: 3px solid #e9b44c; padding: 10px 14px; border-radius: 6px;
+          background: color-mix(in srgb, #e9b44c 12%, transparent); }
+.rl-stats { display: flex; gap: 18px; flex-wrap: wrap; font-size: .9rem; opacity: .85; }
+.rl-stats b { font-variant-numeric: tabular-nums; }
 """
 
-HEADER_HTML = """
-<div class="header">
-    <div>
-        <h1 class="header-title">NEXUS-1 // LANGUAGE-TO-ACTION ROBOT</h1>
-        <h2 class="header-subtitle">SO-101 6-DOF ARM // MUJOCO PHYSICS // OFFLINE LLM</h2>
-    </div>
-    <div style="font-family: monospace; color: #00ff88; display: flex; align-items: center;">
-        <span class="live-dot"></span> SYSTEM ONLINE
-    </div>
-</div>
-"""
 
-def generate_status_row():
-    return f"""
-    <div class="status-row">
-        <span>BACKEND: {backend_name.upper()}</span>
-        <span>POLICY: {policy_name.upper()}</span>
-        <span>MODEL: {model_id}</span>
-    </div>
-    """
+def _esc(x) -> str:
+    return html.escape(str(x))
 
-def format_subtasks(subtasks: List[Dict]) -> str:
+
+def header_html(planner_name: str, fault: str, verifier: str, retry: str) -> str:
+    chips = [f"Planner: {planner_name}", "Perception: RGB-D segmentation", f"Verifier: {verifier}",
+             f"Retry: {retry}", f"Faults: {fault}"]
+    return ("<div class='rl-head'><h1>Language-to-Action Robot Agent</h1>"
+            "<p>Plan with a local LLM, act, check the result from camera pixels, retry from the measured error.</p>"
+            "<div class='rl-chips'>" + "".join(f"<span class='rl-chip'>{_esc(c)}</span>" for c in chips)
+            + "</div></div>")
+
+
+def timeline_html(subtasks: List[Dict]) -> str:
     if not subtasks:
-        return "<div style='color: rgba(255,255,255,0.3); font-family: monospace; padding: 20px;'>NO TASKS QUEUED</div>"
-    
-    html = []
+        return "<div class='rl-empty'>No plan yet. Enter an instruction and press Run.</div>"
+    cards = []
     for st in subtasks:
         status = st.get("status", "pending")
-        attempts = st.get("attempts", 0)
-        
-        status_text = "○ QUEUED"
-        if status == "in_progress": status_text = "◉ EXECUTING"
-        elif status == "completed": status_text = "✓ DONE"
-        elif status == "failed": status_text = "✗ FAILED"
-        
-        progress = 0
-        if status == "completed": progress = 100
-        elif status == "in_progress": progress = 50
-        
-        attempt_str = f" [A{attempts}]" if attempts > 0 else ""
-        
-        html.append(f"""
-        <div class="task-row">
-            <div class="task-badge">T-{st.get('id', 'X'):02d}</div>
-            <div class="task-action">{str(st.get('action', '')).upper()}</div>
-            <div class="task-obj">{st.get('object', '')} &rarr; {st.get('target', '')}</div>
-            <div class="task-status status-{status}">{status_text}{attempt_str}</div>
-        </div>
-        <div class="progress-bar-container">
-            <div class="progress-bar" style="width: {progress}%;"></div>
-        </div>
-        """)
-    return "".join(html)
+        label = {"pending": "Queued", "in_progress": "Running", "completed": "Done", "failed": "Failed"}[status]
+        target = "bin" if st.get("target") == "bin" else f"on {str(st.get('target', '')).split('_')[0]}"
+        atts = []
+        for a in st.get("attempt_log", []):
+            if a.get("observed_by") == "none":
+                v = "<b>·</b> not checked"
+            else:
+                mark = "✓" if a["verdict"] else "✗"
+                v = f"<b class='{'ok' if a['verdict'] else 'bad'}'>{mark}</b> {_esc(a['observed_by'])}"
+            truth = a.get("oracle_success")
+            t = "" if truth is None else f" <small>truth {'✓' if truth else '✗'}</small>"
+            atts.append(f"<span class='rl-att'>Attempt {a['attempt']}: {v}{t}</span>")
+        cards.append(
+            f"<div class='rl-card'><div class='t'><span>{st.get('id', '')}. "
+            f"{_esc(str(st.get('action', '')).replace('_', ' '))} "
+            f"{_esc(str(st.get('object', '')).split('_')[0])} {_esc(target)}</span>"
+            f"<span class='rl-badge {status}'>{label}</span></div>"
+            f"<div class='rl-atts'>{''.join(atts)}</div></div>")
+    return "".join(cards)
 
-def format_stats(summary: Dict) -> str:
+
+def stats_html(summary: Optional[Dict]) -> str:
     if not summary:
-        return """
-        <div class="footer-stats">
-            <span>TOTAL TASKS: <span class="stat-value">0</span></span>
-            <span>SUCCESS: <span class="stat-value stat-success">0</span></span>
-            <span>FAILED: <span class="stat-value stat-failed">0</span></span>
-            <span>RETRIES: <span class="stat-value">0</span></span>
-            <span>ELAPSED TIME: <span class="stat-value">0.00s</span></span>
-        </div>
-        """
-    return f"""
-    <div class="footer-stats">
-        <span>TOTAL TASKS: <span class="stat-value">{summary.get('total_subtasks', 0)}</span></span>
-        <span>SUCCESS: <span class="stat-value stat-success">{summary.get('successful', 0)}</span></span>
-        <span>FAILED: <span class="stat-value stat-failed">{summary.get('failed', 0)}</span></span>
-        <span>RETRIES: <span class="stat-value">{summary.get('total_retries', 0)}</span></span>
-        <span>ELAPSED TIME: <span class="stat-value">{summary.get('elapsed_time', 0):.2f}s</span></span>
-    </div>
-    """
+        return ""
+    return ("<div class='rl-stats'>"
+            f"<span>Subtasks <b>{summary.get('successful', 0)}/{summary.get('total_subtasks', 0)}</b> succeeded</span>"
+            f"<span>Retries <b>{summary.get('total_retries', 0)}</b></span>"
+            f"<span>Elapsed <b>{summary.get('elapsed_time', 0):.1f}s</b></span></div>")
 
-def run_agent_ui(instruction: str, max_retries: int, max_steps: int, current_clarification: dict) -> Generator:
-    if current_clarification and current_clarification.get('needed'):
-        answer = current_clarification.get('answer', '')
-        if answer:
-            instruction = f"{instruction} (Clarification: {answer})"
-    
-    clarification_state = {"needed": False, "question": "", "answer": ""}
-    clarification_html = ""
-    last_video = None
-    
-    if not instruction.strip():
-        yield (format_subtasks([]), "[SYSTEM] Ready. Enter a command sequence.", clarification_html, clarification_state, None, format_stats({}))
+
+def _resources():
+    if _STATE["env"] is None:
+        _STATE["env"] = create_environment()
+        _STATE["planner"] = create_planner()
+    return _STATE["env"], _STATE["planner"]
+
+
+def run_ui(instruction, fault, verifier, retry, budget, answer):
+    """Generator feeding: header, timeline, stats, video, camera image, log, ask group, ask text, clips."""
+    no_ask = (gr.update(visible=False), "")
+    if not (instruction or "").strip():
+        yield (gr.skip(), timeline_html([]), "", None, None, "Enter an instruction first.", *no_ask,
+               gr.update(choices=[], value=None))
         return
+    if not _LOCK.acquire(blocking=False):
+        yield (gr.skip(), gr.skip(), "", gr.skip(), gr.skip(),
+               "The robot is busy with another run. Try again in a moment.", *no_ask, gr.skip())
+        return
+    try:
+        env, planner = _resources()
+        text = f"{instruction.strip()} ({answer.strip()})" if answer and answer.strip() else instruction.strip()
+        agent = RobotTaskAgent(env=env, planner=planner, console_output=False, fault_profile=fault,
+                               verifier_mode=verifier, retry_strategy=retry)
+        _STATE["agent"] = agent
+        os.makedirs(VIDEOS_DIR, exist_ok=True)
+        head = header_html(getattr(planner, "backend_name", "?"), fault, verifier, retry)
+        clips: List[tuple] = []
+        last_video = last_img = None
+        summary = None
+        for ev in agent.run(text, max_retries=int(budget)):
+            if ev.video_path and ev.video_path not in [c[1] for c in clips]:
+                clips.append((f"Clip {len(clips) + 1}", ev.video_path))
+                last_video = ev.video_path
+            if ev.camera_image is not None:
+                last_img = ev.camera_image
+            summary = ev.summary or summary
+            if ev.clarification:
+                ask = (gr.update(visible=True),
+                       f"<div class='rl-ask'><b>The planner needs one detail.</b><br>{_esc(ev.clarification)}</div>")
+                yield (head, timeline_html(ev.subtasks), "", last_video, last_img, ev.log_text, *ask,
+                       gr.update(choices=clips, value=last_video))
+                return
+            yield (head, timeline_html(ev.subtasks), stats_html(summary), last_video, last_img, ev.log_text,
+                   *no_ask, gr.update(choices=clips, value=last_video))
+        if summary is None:
+            yield (head, gr.skip(), "", last_video, last_img, "Run ended without a result.", *no_ask, gr.skip())
+    finally:
+        _STATE["agent"] = None
+        _LOCK.release()
 
-    summary = {}
-    for event in agent.run(instruction, max_retries=int(max_retries), max_steps=int(max_steps)):
-        if event.video_path:
-            last_video = event.video_path
-            
-        if event.clarification:
-            clarification_state["needed"] = True
-            clarification_state["question"] = event.clarification
-            clarification_html = f"""
-            <div class="clarification-banner">
-                <strong style="color: #ffb800;">CLARIFICATION REQUIRED</strong><br>
-                {event.clarification}
-            </div>
-            """
-            yield (format_subtasks(event.subtasks), event.log_text, clarification_html, clarification_state, last_video, format_stats(summary))
-            return
-            
-        summary = event.summary or summary
-        yield (format_subtasks(event.subtasks), event.log_text, "", clarification_state, last_video, format_stats(summary))
 
-def stop_agent() -> str:
-    agent.request_stop()
-    return "Stop requested..."
+def stop_run():
+    agent = _STATE.get("agent")
+    if agent is not None:
+        agent.request_stop()
+        return "Stop requested; the run ends after the current attempt."
+    return "Nothing is running."
 
-with gr.Blocks(title="NEXUS-1 CONTROL") as demo:
-    gr.HTML(HEADER_HTML)
-    
-    clarification_state = gr.State({"needed": False, "question": "", "answer": ""})
-    
-    with gr.Row():
-        with gr.Column(scale=1):
-            instruction_input = gr.Textbox(
-                show_label=False,
-                placeholder="Enter command sequence...",
-                lines=2,
-                elem_classes=["input-panel"],
-                container=False
-            )
-            
-            clarification_html = gr.HTML(value="")
-            clarification_answer = gr.Textbox(
-                show_label=False,
-                placeholder="Enter clarification...",
-                visible=False,
-                container=False
-            )
-            clarification_submit = gr.Button("SUBMIT ANSWER", visible=False, elem_classes=["btn-execute"])
-            
-            with gr.Row():
-                submit_btn = gr.Button("EXECUTE", elem_classes=["btn-execute"])
-                stop_btn = gr.Button("ABORT", elem_classes=["btn-abort"])
-            
-            max_retries_slider = gr.Slider(1, 5, value=MAX_RETRIES_PER_SUBTASK, step=1, label="Max Retries")
-            max_steps_slider = gr.Slider(10, 200, value=MAX_STEPS_PER_ROLLOUT, step=10, label="Max Steps")
-            
-            gr.HTML(generate_status_row())
-            
-        with gr.Column(scale=2):
-            timeline_output = gr.HTML(label="Mission Timeline", value=format_subtasks([]))
-            
-            video_output = gr.Video(
-                label="PRIMARY ROBOT TELEMETRY FEED (MUJOCO 3D PHYSICS)",
-                show_label=True,
-                elem_id="robot-video",
-                interactive=False,
-                autoplay=True,
-                height=340
-            )
 
-    log_output = gr.Textbox(
-        show_label=False,
-        value="[SYSTEM] Ready.",
-        lines=12,
-        interactive=False,
-        elem_classes=["log-container"],
-        max_lines=20,
-        autoscroll=True
-    )
-    
-    stats_output = gr.HTML(value=format_stats({}))
-    
-    def on_clarification_change(state):
-        if state and state.get("needed"):
-            return gr.update(visible=True), gr.update(visible=True)
-        return gr.update(visible=False), gr.update(visible=False)
-        
-    clarification_state.change(
-        fn=on_clarification_change,
-        inputs=[clarification_state],
-        outputs=[clarification_answer, clarification_submit]
-    )
-    
-    def handle_clarification_submit(answer, state):
-        if state:
-            state["answer"] = answer
-        return state
+def build() -> gr.Blocks:
+    with gr.Blocks(title="Robot Agent") as demo:
+        head = gr.HTML(header_html("local LLM (Ollama)", "nominal", "perception", "corrected"))
+        with gr.Row(equal_height=False):
+            with gr.Column(scale=4, min_width=320):
+                instruction = gr.Textbox(label="Instruction", lines=2, placeholder="put the red block in the bin")
+                gr.Examples(EXAMPLES, instruction, label="Try")
+                with gr.Row():
+                    run_btn = gr.Button("Run", variant="primary", scale=3)
+                    stop_btn = gr.Button("Stop", variant="secondary", scale=1)
+                with gr.Accordion("Robot settings", open=False):
+                    fault = gr.Dropdown(FAULT_CHOICES, value="nominal", label="Fault profile",
+                                        info="Faults are injected into the arm, not the camera.")
+                    verifier = gr.Radio(VERIFIER_CHOICES, value="perception", label="Verifier")
+                    retry = gr.Radio(RETRY_CHOICES, value="corrected", label="Retry")
+                    budget = gr.Slider(1, 5, value=MAX_RETRIES_PER_SUBTASK, step=1, label="Attempts per subtask")
+                with gr.Group(visible=False) as ask_group:
+                    ask_text = gr.HTML()
+                    answer = gr.Textbox(label="Your answer", placeholder="the red one")
+                    answer_btn = gr.Button("Answer and run", variant="primary")
+                stats = gr.HTML()
+                timeline = gr.HTML(timeline_html([]))
+            with gr.Column(scale=6, min_width=420):
+                video = gr.Video(label="Rollout", interactive=False, autoplay=True, height=360)
+                clips = gr.Dropdown(label="Clips", choices=[], interactive=True)
+                camera = gr.Image(label="What the verifier saw", interactive=False, height=300)
+        with gr.Accordion("Run log", open=False):
+            log = gr.Textbox(show_label=False, lines=10, max_lines=18, interactive=False, autoscroll=True)
 
-    clarification_submit.click(
-        fn=handle_clarification_submit,
-        inputs=[clarification_answer, clarification_state],
-        outputs=[clarification_state]
-    ).then(
-        fn=run_agent_ui,
-        inputs=[instruction_input, max_retries_slider, max_steps_slider, clarification_state],
-        outputs=[timeline_output, log_output, clarification_html, clarification_state, video_output, stats_output]
-    )
+        outputs = [head, timeline, stats, video, camera, log, ask_group, ask_text, clips]
+        no_answer = gr.State("")
+        run_btn.click(run_ui, [instruction, fault, verifier, retry, budget, no_answer], outputs)
+        instruction.submit(run_ui, [instruction, fault, verifier, retry, budget, no_answer], outputs)
+        answer_btn.click(run_ui, [instruction, fault, verifier, retry, budget, answer], outputs)
+        stop_btn.click(stop_run, None, log)
+        clips.change(lambda p: p, clips, video)
+    return demo
 
-    submit_btn.click(
-        fn=run_agent_ui,
-        inputs=[instruction_input, max_retries_slider, max_steps_slider, clarification_state],
-        outputs=[timeline_output, log_output, clarification_html, clarification_state, video_output, stats_output]
-    )
 
-    stop_btn.click(fn=stop_agent, inputs=[], outputs=[])
+demo = build()
 
 if __name__ == "__main__":
     os.makedirs(VIDEOS_DIR, exist_ok=True)
-    for port in range(7860, 7870):
-        try:
-            demo.launch(server_name="0.0.0.0", server_port=port, share=False, css=css, theme=gr.themes.Base())
-            break
-        except OSError as exc:
-            print(f"[Dashboard] Port {port} busy ({exc.__class__.__name__}); trying {port + 1}")
-    else:
-        print("[Dashboard] No free port.")
+    demo.queue().launch(server_name="127.0.0.1", css=CSS, theme=gr.themes.Soft())

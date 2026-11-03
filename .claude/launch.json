@@ -4,8 +4,14 @@
     {
       "name": "dashboard",
       "runtimeExecutable": "python",
-      "runtimeArgs": ["dashboard/app.py"],
+      "runtimeArgs": ["-m", "dashboard.app"],
       "port": 7860
+    },
+    {
+      "name": "viewer",
+      "runtimeExecutable": "python",
+      "runtimeArgs": ["-m", "http.server", "8765", "--directory", "web"],
+      "port": 8765
     }
   ]
 }

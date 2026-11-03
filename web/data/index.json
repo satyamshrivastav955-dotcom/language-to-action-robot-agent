@@ -1,0 +1,93 @@
+{
+ "episodes": [
+  {
+   "id": "biased-fix-no_verifier",
+   "task": "stack",
+   "seed": 0,
+   "profile": "biased",
+   "arm": "no_verifier",
+   "instruction": "stack the blue block on the green block",
+   "oracle_success": false,
+   "believed_success": true,
+   "attempts": 1
+  },
+  {
+   "id": "biased-fix-verifier_blind",
+   "task": "stack",
+   "seed": 0,
+   "profile": "biased",
+   "arm": "verifier_blind",
+   "instruction": "stack the blue block on the green block",
+   "oracle_success": false,
+   "believed_success": false,
+   "attempts": 3
+  },
+  {
+   "id": "biased-fix-verifier_corrected",
+   "task": "stack",
+   "seed": 0,
+   "profile": "biased",
+   "arm": "verifier_corrected",
+   "instruction": "stack the blue block on the green block",
+   "oracle_success": true,
+   "believed_success": true,
+   "attempts": 2
+  },
+  {
+   "id": "slip-recover-no_verifier",
+   "task": "stack",
+   "seed": 0,
+   "profile": "slippery",
+   "arm": "no_verifier",
+   "instruction": "stack the blue block on the green block",
+   "oracle_success": false,
+   "believed_success": true,
+   "attempts": 1
+  },
+  {
+   "id": "slip-recover-verifier_blind",
+   "task": "stack",
+   "seed": 0,
+   "profile": "slippery",
+   "arm": "verifier_blind",
+   "instruction": "stack the blue block on the green block",
+   "oracle_success": true,
+   "believed_success": true,
+   "attempts": 2
+  },
+  {
+   "id": "slip-recover-verifier_corrected",
+   "task": "stack",
+   "seed": 0,
+   "profile": "slippery",
+   "arm": "verifier_corrected",
+   "instruction": "stack the blue block on the green block",
+   "oracle_success": true,
+   "believed_success": true,
+   "attempts": 2
+  },
+  {
+   "id": "nominal-twostep-verifier_corrected",
+   "task": "two_step",
+   "seed": 0,
+   "profile": "nominal",
+   "arm": "verifier_corrected",
+   "instruction": "put the red block in the bin, then stack the yellow block on the green block",
+   "oracle_success": true,
+   "believed_success": true,
+   "attempts": 2
+  },
+  {
+   "id": "budget-exhausted-verifier_corrected",
+   "task": "pick_place",
+   "seed": 2,
+   "profile": "noisy",
+   "arm": "verifier_corrected",
+   "instruction": "put the red block in the bin",
+   "oracle_success": false,
+   "believed_success": true,
+   "attempts": 3
+  }
+ ],
+ "replay_mismatches": []
+}

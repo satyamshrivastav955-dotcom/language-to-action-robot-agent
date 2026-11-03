@@ -1,0 +1,62 @@
+{
+ "id": "biased-fix-verifier_corrected",
+ "task": "stack",
+ "seed": 0,
+ "profile": "biased",
+ "arm": "verifier_corrected",
+ "instruction": "stack the blue block on the green block",
+ "oracle_success": true,
+ "believed_success": true,
+ "attempts": 2,
+ "subtasks": [
+  {
+   "id": 1,
+   "action": "stack",
+   "object": "blue_block",
+   "target": "green_block",
+   "attempts": [
+    {
+     "attempt": 1,
+     "video": "episodes/biased-fix-verifier_corrected/subtask_1_attempt_1.mp4",
+     "verify_image": "episodes/biased-fix-verifier_corrected/verify_1_1.jpg",
+     "verdict": false,
+     "oracle_success": false,
+     "observed_by": "perception",
+     "reason": "Close to target but outside tolerance (0.05m > 0.05m)",
+     "error_cm": [
+      4.3,
+      -2.8
+     ],
+     "correction_applied_cm": null,
+     "correction_next_cm": [
+      -3.7,
+      2.4
+     ],
+     "grasp_detected": true,
+     "perception_failure": false
+    },
+    {
+     "attempt": 2,
+     "video": "episodes/biased-fix-verifier_corrected/subtask_1_attempt_2.mp4",
+     "verify_image": "episodes/biased-fix-verifier_corrected/verify_1_2.jpg",
+     "verdict": true,
+     "oracle_success": true,
+     "observed_by": "perception",
+     "reason": "Object successfully stacked",
+     "error_cm": [
+      0.7,
+      -0.5
+     ],
+     "correction_applied_cm": [
+      -3.7,
+      2.4
+     ],
+     "correction_next_cm": null,
+     "grasp_detected": true,
+     "perception_failure": false
+    }
+   ],
+   "final_oracle": true
+  }
+ ]
+}

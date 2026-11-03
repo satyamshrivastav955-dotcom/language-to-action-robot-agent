@@ -1,0 +1,122 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Language-to-Action Robot Agent: closed-loop verification, measured</title>
+  <meta name="description" content="A language-to-action manipulation agent that verifies outcomes from camera pixels and retries from the measured error. Replays and ablation results.">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 24 24%27%3E%3Cpath d=%27M4 18h6l3-9 3 9h4%27 fill=%27none%27 stroke=%27%237aa7ff%27 stroke-width=%272.4%27 stroke-linecap=%27round%27 stroke-linejoin=%27round%27/%3E%3Ccircle cx=%2712%27 cy=%275%27 r=%272.2%27 fill=%27%237aa7ff%27/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="styles.css">
+  <script>
+    // Apply the saved theme before first paint to avoid a flash.
+    try { var t = localStorage.getItem("theme"); if (t) document.documentElement.dataset.theme = t; } catch (e) {}
+  </script>
+</head>
+<body>
+  <a class="skip" href="#main">Skip to content</a>
+
+  <header class="top">
+    <div class="wrap top-inner">
+      <a class="brand" href="#overview" aria-label="Language-to-Action Robot Agent, home">
+        <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M4 18h6l3-9 3 9h4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><circle cx="12" cy="5" r="2" fill="currentColor"/></svg>
+        <span>Robot Agent</span>
+      </a>
+      <nav class="tabs" role="tablist" aria-label="Sections">
+        <button role="tab" id="tab-overview" aria-controls="view-overview" data-view="overview">Overview</button>
+        <button role="tab" id="tab-replays" aria-controls="view-replays" data-view="replays">Replays</button>
+        <button role="tab" id="tab-results" aria-controls="view-results" data-view="results">Results</button>
+        <button role="tab" id="tab-method" aria-controls="view-method" data-view="method">Method</button>
+      </nav>
+      <div class="top-actions">
+        <button id="theme" class="icon-btn" type="button" aria-label="Toggle light and dark theme">
+          <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg>
+        </button>
+        <a class="link-btn" href="https://github.com/satyamshrivastav955-dotcom/language-to-action-robot-agent" rel="noopener">GitHub</a>
+      </div>
+    </div>
+  </header>
+
+  <main id="main" class="wrap">
+    <noscript><p class="notice">This viewer needs JavaScript to load the recorded rollouts and results.</p></noscript>
+
+    <!-- Overview -->
+    <section id="view-overview" role="tabpanel" aria-labelledby="tab-overview" hidden>
+      <div class="hero">
+        <p class="eyebrow">Closed-loop manipulation, measured</p>
+        <h1>A robot that checks its own work from camera pixels, and retries from the error it measured.</h1>
+        <p class="lede">Natural language goes in. A local language model plans, a controller acts, and a separate camera-only verifier decides whether the block really ended up where it should. Every number here comes from a reproducible simulation benchmark, scored by ground truth the agent never sees.</p>
+        <div class="cta">
+          <button class="btn primary" type="button" data-go="replays">Watch the replays</button>
+          <button class="btn" type="button" data-go="results">See the ablation</button>
+        </div>
+      </div>
+      <div id="stats" class="stat-grid" aria-live="polite"></div>
+      <div class="card callout">
+        <h2>What this is, and is not</h2>
+        <ul class="plain">
+          <li><strong>Is:</strong> a controlled study of one question, <em>how much does verifying from pixels and retrying from the measured error raise task success when execution is imperfect?</em></li>
+          <li><strong>Is not:</strong> a learned manipulation policy. Skills are scripted waypoints, and the carry uses a disclosed kinematic grasp assist. Faults are injected on purpose, because a perfect scripted arm has nothing for a verifier to catch.</li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- Replays -->
+    <section id="view-replays" role="tabpanel" aria-labelledby="tab-replays" hidden>
+      <div class="section-head">
+        <h2>Recorded rollouts</h2>
+        <p class="muted">Each clip is a real simulation run. Pick a story, then step through the attempts.</p>
+      </div>
+      <div class="replay-layout">
+        <aside class="story-list" id="stories" aria-label="Episodes"></aside>
+        <div class="player" id="player" aria-live="polite"></div>
+      </div>
+    </section>
+
+    <!-- Results -->
+    <section id="view-results" role="tabpanel" aria-labelledby="tab-results" hidden>
+      <div class="section-head">
+        <h2>Ablation: success rate with and without the verifier</h2>
+        <p class="muted" id="results-sub"></p>
+      </div>
+      <div class="seg" id="profile-seg" role="radiogroup" aria-label="Fault profile"></div>
+      <p class="muted small" id="profile-desc"></p>
+      <div id="results-table" class="card flush"></div>
+      <div id="paired" class="card"></div>
+      <div id="maniskill" class="card" hidden></div>
+      <div class="two-col">
+        <div id="confusion" class="card"></div>
+        <div id="planners" class="card"></div>
+      </div>
+    </section>
+
+    <!-- Method -->
+    <section id="view-method" role="tabpanel" aria-labelledby="tab-method" hidden>
+      <div class="section-head">
+        <h2>How it works</h2>
+        <p class="muted">One loop per subtask. The ground-truth oracle sits outside it and is read only to score the result.</p>
+      </div>
+      <div class="card"><div id="diagram"></div></div>
+      <div class="two-col">
+        <div class="card">
+          <h3>Perception</h3>
+          <p>An overhead RGB-D camera with sensor noise. Colour segmentation plus depth gives block centres; a local VLM (Qwen3-VL via Ollama) is the alternative grounder. The arm is moved out of view before each look.</p>
+        </div>
+        <div class="card">
+          <h3>Verification and retry</h3>
+          <p>The verifier measures where the block is relative to where it should be. A failed check yields an error vector. The corrected retry shifts the next release by that vector; the blind retry just repeats.</p>
+        </div>
+      </div>
+      <div class="card">
+        <h3>Limits you should know</h3>
+        <ul class="plain" id="limits"></ul>
+      </div>
+    </section>
+  </main>
+
+  <footer class="wrap foot">
+    <span>MIT licensed. Simulation only; numbers are reproducible with <code>python -m bench.run</code>.</span>
+  </footer>
+
+  <script src="app.js" defer></script>
+</body>
+</html>

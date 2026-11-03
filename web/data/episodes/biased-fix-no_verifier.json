@@ -1,0 +1,36 @@
+{
+ "id": "biased-fix-no_verifier",
+ "task": "stack",
+ "seed": 0,
+ "profile": "biased",
+ "arm": "no_verifier",
+ "instruction": "stack the blue block on the green block",
+ "oracle_success": false,
+ "believed_success": true,
+ "attempts": 1,
+ "subtasks": [
+  {
+   "id": 1,
+   "action": "stack",
+   "object": "blue_block",
+   "target": "green_block",
+   "attempts": [
+    {
+     "attempt": 1,
+     "video": "episodes/biased-fix-no_verifier/subtask_1_attempt_1.mp4",
+     "verify_image": null,
+     "verdict": true,
+     "oracle_success": false,
+     "observed_by": "none",
+     "reason": "not verified",
+     "error_cm": null,
+     "correction_applied_cm": null,
+     "correction_next_cm": null,
+     "grasp_detected": true,
+     "perception_failure": false
+    }
+   ],
+   "final_oracle": false
+  }
+ ]
+}

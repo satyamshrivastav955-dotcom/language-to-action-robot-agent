@@ -1,0 +1,73 @@
+{
+ "id": "biased-fix-verifier_blind",
+ "task": "stack",
+ "seed": 0,
+ "profile": "biased",
+ "arm": "verifier_blind",
+ "instruction": "stack the blue block on the green block",
+ "oracle_success": false,
+ "believed_success": false,
+ "attempts": 3,
+ "subtasks": [
+  {
+   "id": 1,
+   "action": "stack",
+   "object": "blue_block",
+   "target": "green_block",
+   "attempts": [
+    {
+     "attempt": 1,
+     "video": "episodes/biased-fix-verifier_blind/subtask_1_attempt_1.mp4",
+     "verify_image": "episodes/biased-fix-verifier_blind/verify_1_1.jpg",
+     "verdict": false,
+     "oracle_success": false,
+     "observed_by": "perception",
+     "reason": "Close to target but outside tolerance (0.05m > 0.05m)",
+     "error_cm": [
+      4.3,
+      -2.8
+     ],
+     "correction_applied_cm": null,
+     "correction_next_cm": null,
+     "grasp_detected": true,
+     "perception_failure": false
+    },
+    {
+     "attempt": 2,
+     "video": "episodes/biased-fix-verifier_blind/subtask_1_attempt_2.mp4",
+     "verify_image": "episodes/biased-fix-verifier_blind/verify_1_2.jpg",
+     "verdict": false,
+     "oracle_success": false,
+     "observed_by": "perception",
+     "reason": "Grasp failed - object was not picked up (contact/friction issue)",
+     "error_cm": [
+      4.4,
+      -2.8
+     ],
+     "correction_applied_cm": null,
+     "correction_next_cm": null,
+     "grasp_detected": true,
+     "perception_failure": false
+    },
+    {
+     "attempt": 3,
+     "video": "episodes/biased-fix-verifier_blind/subtask_1_attempt_3.mp4",
+     "verify_image": "episodes/biased-fix-verifier_blind/verify_1_3.jpg",
+     "verdict": false,
+     "oracle_success": false,
+     "observed_by": "perception",
+     "reason": "Grasp failed - object was not picked up (contact/friction issue)",
+     "error_cm": [
+      4.4,
+      -2.8
+     ],
+     "correction_applied_cm": null,
+     "correction_next_cm": null,
+     "grasp_detected": true,
+     "perception_failure": false
+    }
+   ],
+   "final_oracle": false
+  }
+ ]
+}

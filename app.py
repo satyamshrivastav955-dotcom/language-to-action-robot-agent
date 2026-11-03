@@ -7,11 +7,12 @@ headless EGL rendering before anything imports mujoco.
 
 import os
 
-os.environ.setdefault("MUJOCO_GL", "egl")
+os.environ.setdefault("MUJOCO_GL", "egl")  # use osmesa on machines without EGL
 
-from dashboard.app import demo  # noqa: E402
+import gradio as gr  # noqa: E402
+from dashboard.app import CSS, demo  # noqa: E402
 from configs.settings import VIDEOS_DIR  # noqa: E402
 
 if __name__ == "__main__":
     os.makedirs(VIDEOS_DIR, exist_ok=True)
-    demo.launch()
+    demo.queue().launch(css=CSS, theme=gr.themes.Soft())

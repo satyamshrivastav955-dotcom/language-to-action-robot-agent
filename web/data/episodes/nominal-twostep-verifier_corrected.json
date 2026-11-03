@@ -1,0 +1,65 @@
+{
+ "id": "nominal-twostep-verifier_corrected",
+ "task": "two_step",
+ "seed": 0,
+ "profile": "nominal",
+ "arm": "verifier_corrected",
+ "instruction": "put the red block in the bin, then stack the yellow block on the green block",
+ "oracle_success": true,
+ "believed_success": true,
+ "attempts": 2,
+ "subtasks": [
+  {
+   "id": 1,
+   "action": "pick_and_place",
+   "object": "red_block",
+   "target": "bin",
+   "attempts": [
+    {
+     "attempt": 1,
+     "video": "episodes/nominal-twostep-verifier_corrected/subtask_1_attempt_1.mp4",
+     "verify_image": "episodes/nominal-twostep-verifier_corrected/verify_1_1.jpg",
+     "verdict": true,
+     "oracle_success": true,
+     "observed_by": "perception",
+     "reason": "Object successfully placed at target",
+     "error_cm": [
+      -0.1,
+      -0.0
+     ],
+     "correction_applied_cm": null,
+     "correction_next_cm": null,
+     "grasp_detected": true,
+     "perception_failure": false
+    }
+   ],
+   "final_oracle": true
+  },
+  {
+   "id": 2,
+   "action": "stack",
+   "object": "yellow_block",
+   "target": "green_block",
+   "attempts": [
+    {
+     "attempt": 1,
+     "video": "episodes/nominal-twostep-verifier_corrected/subtask_2_attempt_1.mp4",
+     "verify_image": "episodes/nominal-twostep-verifier_corrected/verify_2_1.jpg",
+     "verdict": true,
+     "oracle_success": true,
+     "observed_by": "perception",
+     "reason": "Object successfully stacked",
+     "error_cm": [
+      0.0,
+      0.1
+     ],
+     "correction_applied_cm": null,
+     "correction_next_cm": null,
+     "grasp_detected": true,
+     "perception_failure": false
+    }
+   ],
+   "final_oracle": true
+  }
+ ]
+}

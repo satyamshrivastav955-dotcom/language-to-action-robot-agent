@@ -1,0 +1,73 @@
+{
+ "id": "budget-exhausted-verifier_corrected",
+ "task": "pick_place",
+ "seed": 2,
+ "profile": "noisy",
+ "arm": "verifier_corrected",
+ "instruction": "put the red block in the bin",
+ "oracle_success": false,
+ "believed_success": true,
+ "attempts": 3,
+ "subtasks": [
+  {
+   "id": 1,
+   "action": "pick_and_place",
+   "object": "red_block",
+   "target": "bin",
+   "attempts": [
+    {
+     "attempt": 1,
+     "video": "episodes/budget-exhausted-verifier_corrected/subtask_1_attempt_1.mp4",
+     "verify_image": "episodes/budget-exhausted-verifier_corrected/verify_1_1.jpg",
+     "verdict": false,
+     "oracle_success": false,
+     "observed_by": "perception",
+     "reason": "Target missed by moderate margin (0.11m) - possible timing issue",
+     "error_cm": [
+      -1.0,
+      11.5
+     ],
+     "correction_applied_cm": null,
+     "correction_next_cm": null,
+     "grasp_detected": false,
+     "perception_failure": false
+    },
+    {
+     "attempt": 2,
+     "video": "episodes/budget-exhausted-verifier_corrected/subtask_1_attempt_2.mp4",
+     "verify_image": "episodes/budget-exhausted-verifier_corrected/verify_1_2.jpg",
+     "verdict": false,
+     "oracle_success": false,
+     "observed_by": "perception",
+     "reason": "Target missed by moderate margin (0.10m) - possible timing issue",
+     "error_cm": [
+      -0.6,
+      10.0
+     ],
+     "correction_applied_cm": null,
+     "correction_next_cm": null,
+     "grasp_detected": false,
+     "perception_failure": false
+    },
+    {
+     "attempt": 3,
+     "video": "episodes/budget-exhausted-verifier_corrected/subtask_1_attempt_3.mp4",
+     "verify_image": "episodes/budget-exhausted-verifier_corrected/verify_1_3.jpg",
+     "verdict": true,
+     "oracle_success": false,
+     "observed_by": "perception",
+     "reason": "Object successfully placed at target",
+     "error_cm": [
+      3.0,
+      -3.8
+     ],
+     "correction_applied_cm": null,
+     "correction_next_cm": null,
+     "grasp_detected": true,
+     "perception_failure": false
+    }
+   ],
+   "final_oracle": false
+  }
+ ]
+}

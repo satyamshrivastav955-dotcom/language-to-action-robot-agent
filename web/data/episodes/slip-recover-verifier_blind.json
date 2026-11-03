@@ -1,0 +1,56 @@
+{
+ "id": "slip-recover-verifier_blind",
+ "task": "stack",
+ "seed": 0,
+ "profile": "slippery",
+ "arm": "verifier_blind",
+ "instruction": "stack the blue block on the green block",
+ "oracle_success": true,
+ "believed_success": true,
+ "attempts": 2,
+ "subtasks": [
+  {
+   "id": 1,
+   "action": "stack",
+   "object": "blue_block",
+   "target": "green_block",
+   "attempts": [
+    {
+     "attempt": 1,
+     "video": "episodes/slip-recover-verifier_blind/subtask_1_attempt_1.mp4",
+     "verify_image": "episodes/slip-recover-verifier_blind/verify_1_1.jpg",
+     "verdict": false,
+     "oracle_success": false,
+     "observed_by": "perception",
+     "reason": "Target missed by moderate margin (0.22m) - possible timing issue",
+     "error_cm": [
+      4.4,
+      21.5
+     ],
+     "correction_applied_cm": null,
+     "correction_next_cm": null,
+     "grasp_detected": true,
+     "perception_failure": false
+    },
+    {
+     "attempt": 2,
+     "video": "episodes/slip-recover-verifier_blind/subtask_1_attempt_2.mp4",
+     "verify_image": "episodes/slip-recover-verifier_blind/verify_1_2.jpg",
+     "verdict": true,
+     "oracle_success": true,
+     "observed_by": "perception",
+     "reason": "Object successfully stacked",
+     "error_cm": [
+      -0.1,
+      0.2
+     ],
+     "correction_applied_cm": null,
+     "correction_next_cm": null,
+     "grasp_detected": true,
+     "perception_failure": false
+    }
+   ],
+   "final_oracle": true
+  }
+ ]
+}
