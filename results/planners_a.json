@@ -1,0 +1,356 @@
+[
+ {
+  "model": "heuristic",
+  "n": 18,
+  "valid_json": 1.0,
+  "plan_accuracy": 0.6666666666666666,
+  "median_latency_s": 2.6702880859375e-05,
+  "p90_latency_s": 4.57763671875e-05,
+  "cases": [
+   {
+    "instruction": "put the red block in the bin",
+    "valid_json": true,
+    "correct": true,
+    "latency_s": 0.0003178119659423828
+   },
+   {
+    "instruction": "place the green cube into the container",
+    "valid_json": true,
+    "correct": true,
+    "latency_s": 3.910064697265625e-05
+   },
+   {
+    "instruction": "stack the blue block on the green block",
+    "valid_json": true,
+    "correct": true,
+    "latency_s": 7.772445678710938e-05
+   },
+   {
+    "instruction": "put blue on yellow",
+    "valid_json": true,
+    "correct": false,
+    "latency_s": 1.9788742065429688e-05
+   },
+   {
+    "instruction": "put red in the bin then stack blue on green",
+    "valid_json": true,
+    "correct": true,
+    "latency_s": 4.57763671875e-05
+   },
+   {
+    "instruction": "move all the blocks to the bin",
+    "valid_json": true,
+    "correct": false,
+    "latency_s": 2.2649765014648438e-05
+   },
+   {
+    "instruction": "put the block in the bin",
+    "valid_json": true,
+    "correct": true,
+    "latency_s": 4.76837158203125e-06
+   },
+   {
+    "instruction": "pick up the emerald cube and drop it in the box",
+    "valid_json": true,
+    "correct": false,
+    "latency_s": 2.2172927856445312e-05
+   },
+   {
+    "instruction": "first put yellow in the bin, and after that put red in the bin",
+    "valid_json": true,
+    "correct": true,
+    "latency_s": 3.0994415283203125e-05
+   },
+   {
+    "instruction": "stack red on yellow, then stack green on red",
+    "valid_json": true,
+    "correct": true,
+    "latency_s": 2.4557113647460938e-05
+   },
+   {
+    "instruction": "put the blue block in the bin, then the green one",
+    "valid_json": true,
+    "correct": true,
+    "latency_s": 2.765655517578125e-05
+   },
+   {
+    "instruction": "place the yellow brick on top of the blue brick",
+    "valid_json": true,
+    "correct": false,
+    "latency_s": 2.6702880859375e-05
+   },
+   {
+    "instruction": "get rid of the red block",
+    "valid_json": true,
+    "correct": true,
+    "latency_s": 2.1457672119140625e-05
+   },
+   {
+    "instruction": "clear the red and blue blocks away into the bin",
+    "valid_json": true,
+    "correct": false,
+    "latency_s": 1.9550323486328125e-05
+   },
+   {
+    "instruction": "move the block",
+    "valid_json": true,
+    "correct": true,
+    "latency_s": 4.291534423828125e-06
+   },
+   {
+    "instruction": "put the green block on the red block and then the yellow block in the bin",
+    "valid_json": true,
+    "correct": false,
+    "latency_s": 3.123283386230469e-05
+   },
+   {
+    "instruction": "bin the blue one",
+    "valid_json": true,
+    "correct": true,
+    "latency_s": 1.3589859008789062e-05
+   },
+   {
+    "instruction": "stack the yellow block on the blue block then put the red block in the bin",
+    "valid_json": true,
+    "correct": true,
+    "latency_s": 2.9325485229492188e-05
+   }
+  ]
+ },
+ {
+  "model": "qwen3-vl:2b",
+  "n": 18,
+  "valid_json": 0.3888888888888889,
+  "plan_accuracy": 0.3888888888888889,
+  "median_latency_s": 31.330682516098022,
+  "p90_latency_s": 34.539016246795654,
+  "cases": [
+   {
+    "instruction": "put the red block in the bin",
+    "valid_json": true,
+    "correct": true,
+    "latency_s": 33.04952883720398
+   },
+   {
+    "instruction": "place the green cube into the container",
+    "valid_json": true,
+    "correct": true,
+    "latency_s": 17.976228952407837
+   },
+   {
+    "instruction": "stack the blue block on the green block",
+    "valid_json": true,
+    "correct": true,
+    "latency_s": 7.436329364776611
+   },
+   {
+    "instruction": "put blue on yellow",
+    "valid_json": true,
+    "correct": true,
+    "latency_s": 14.42236614227295
+   },
+   {
+    "instruction": "put red in the bin then stack blue on green",
+    "valid_json": false,
+    "correct": false,
+    "latency_s": 31.183015823364258
+   },
+   {
+    "instruction": "move all the blocks to the bin",
+    "valid_json": false,
+    "correct": false,
+    "latency_s": 31.333545684814453
+   },
+   {
+    "instruction": "put the block in the bin",
+    "valid_json": false,
+    "correct": false,
+    "latency_s": 34.539016246795654
+   },
+   {
+    "instruction": "pick up the emerald cube and drop it in the box",
+    "valid_json": false,
+    "correct": false,
+    "latency_s": 33.46342062950134
+   },
+   {
+    "instruction": "first put yellow in the bin, and after that put red in the bin",
+    "valid_json": true,
+    "correct": true,
+    "latency_s": 21.648419618606567
+   },
+   {
+    "instruction": "stack red on yellow, then stack green on red",
+    "valid_json": false,
+    "correct": false,
+    "latency_s": 33.60616612434387
+   },
+   {
+    "instruction": "put the blue block in the bin, then the green one",
+    "valid_json": false,
+    "correct": false,
+    "latency_s": 33.412033796310425
+   },
+   {
+    "instruction": "place the yellow brick on top of the blue brick",
+    "valid_json": false,
+    "correct": false,
+    "latency_s": 46.78181862831116
+   },
+   {
+    "instruction": "get rid of the red block",
+    "valid_json": false,
+    "correct": false,
+    "latency_s": 43.49334716796875
+   },
+   {
+    "instruction": "clear the red and blue blocks away into the bin",
+    "valid_json": false,
+    "correct": false,
+    "latency_s": 31.330682516098022
+   },
+   {
+    "instruction": "move the block",
+    "valid_json": true,
+    "correct": true,
+    "latency_s": 31.24776530265808
+   },
+   {
+    "instruction": "put the green block on the red block and then the yellow block in the bin",
+    "valid_json": false,
+    "correct": false,
+    "latency_s": 31.07754373550415
+   },
+   {
+    "instruction": "bin the blue one",
+    "valid_json": true,
+    "correct": true,
+    "latency_s": 21.95078730583191
+   },
+   {
+    "instruction": "stack the yellow block on the blue block then put the red block in the bin",
+    "valid_json": false,
+    "correct": false,
+    "latency_s": 30.165563821792603
+   }
+  ]
+ },
+ {
+  "model": "qwen3-vl:4b",
+  "n": 18,
+  "valid_json": 0.8888888888888888,
+  "plan_accuracy": 0.8888888888888888,
+  "median_latency_s": 24.43834376335144,
+  "p90_latency_s": 46.23226070404053,
+  "cases": [
+   {
+    "instruction": "put the red block in the bin",
+    "valid_json": true,
+    "correct": true,
+    "latency_s": 24.43834376335144
+   },
+   {
+    "instruction": "place the green cube into the container",
+    "valid_json": false,
+    "correct": false,
+    "latency_s": 58.00995373725891
+   },
+   {
+    "instruction": "stack the blue block on the green block",
+    "valid_json": true,
+    "correct": true,
+    "latency_s": 7.935940504074097
+   },
+   {
+    "instruction": "put blue on yellow",
+    "valid_json": true,
+    "correct": true,
+    "latency_s": 22.22858476638794
+   },
+   {
+    "instruction": "put red in the bin then stack blue on green",
+    "valid_json": true,
+    "correct": true,
+    "latency_s": 8.944525480270386
+   },
+   {
+    "instruction": "move all the blocks to the bin",
+    "valid_json": true,
+    "correct": true,
+    "latency_s": 14.38133192062378
+   },
+   {
+    "instruction": "put the block in the bin",
+    "valid_json": true,
+    "correct": true,
+    "latency_s": 10.69937515258789
+   },
+   {
+    "instruction": "pick up the emerald cube and drop it in the box",
+    "valid_json": false,
+    "correct": false,
+    "latency_s": 122.06558346748352
+   },
+   {
+    "instruction": "first put yellow in the bin, and after that put red in the bin",
+    "valid_json": true,
+    "correct": true,
+    "latency_s": 25.05946183204651
+   },
+   {
+    "instruction": "stack red on yellow, then stack green on red",
+    "valid_json": true,
+    "correct": true,
+    "latency_s": 29.77534508705139
+   },
+   {
+    "instruction": "put the blue block in the bin, then the green one",
+    "valid_json": true,
+    "correct": true,
+    "latency_s": 13.93322229385376
+   },
+   {
+    "instruction": "place the yellow brick on top of the blue brick",
+    "valid_json": true,
+    "correct": true,
+    "latency_s": 14.998908758163452
+   },
+   {
+    "instruction": "get rid of the red block",
+    "valid_json": true,
+    "correct": true,
+    "latency_s": 23.449471473693848
+   },
+   {
+    "instruction": "clear the red and blue blocks away into the bin",
+    "valid_json": true,
+    "correct": true,
+    "latency_s": 26.69904327392578
+   },
+   {
+    "instruction": "move the block",
+    "valid_json": true,
+    "correct": true,
+    "latency_s": 32.23531484603882
+   },
+   {
+    "instruction": "put the green block on the red block and then the yellow block in the bin",
+    "valid_json": true,
+    "correct": true,
+    "latency_s": 28.405897855758667
+   },
+   {
+    "instruction": "bin the blue one",
+    "valid_json": true,
+    "correct": true,
+    "latency_s": 46.23226070404053
+   },
+   {
+    "instruction": "stack the yellow block on the blue block then put the red block in the bin",
+    "valid_json": true,
+    "correct": true,
+    "latency_s": 20.99525737762451
+   }
+  ]
+ }
+]

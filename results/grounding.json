@@ -1,0 +1,29 @@
+{
+ "segmentation": {
+  "detect_rate": 1.0,
+  "median_err_mm": 1.4985071582668068,
+  "p90_err_mm": 2.071949042180305,
+  "max_err_mm": 2.130260937721448,
+  "frac_within_10mm": 1.0,
+  "median_latency_s": 0.03955721855163574,
+  "n": 24
+ },
+ "qwen3-vl:2b-instruct": {
+  "detect_rate": 1.0,
+  "median_err_mm": 6.62386494319264,
+  "p90_err_mm": 8.622149563411693,
+  "max_err_mm": 9.225844427494302,
+  "frac_within_10mm": 1.0,
+  "median_latency_s": 17.448092222213745,
+  "n": 24
+ },
+ "qwen3-vl:4b-instruct": {
+  "detect_rate": 1.0,
+  "median_err_mm": 6.045124449215548,
+  "p90_err_mm": 7.558361815636,
+  "max_err_mm": 10.151439278116015,
+  "frac_within_10mm": 0.9583333333333334,
+  "median_latency_s": 19.341954708099365,
+  "n": 24
+ }
+}

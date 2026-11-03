@@ -1,3 +1,5 @@
+> **SUPERSEDED (2026-11-02).** Kept for history; several "broken" items below are already fixed in code. Current plan: [docs/ROADMAP.md](docs/ROADMAP.md).
+
 # CV_PROJECT_PLAN.md — Robot Task Agent → Resume-Ready
 
 Working build plan. Execute top-to-bottom over multiple sessions. Each step has an
