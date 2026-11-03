@@ -7,12 +7,9 @@ Both backends share all plan validation, grounding and heuristic fallback
 logic from BasePlanner. Only _call_llm differs between them.
 """
 import json
-import os
 import re
-import sys
 from typing import Dict, List, Optional
 
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from configs.settings import (
     PLANNER_SYSTEM_PROMPT,
@@ -207,7 +204,7 @@ class OllamaPlanner(BasePlanner):
     """Offline LLM planner via Ollama (http://localhost:11434).
 
     Requirements: Ollama installed and running (`ollama serve`).
-    Model pulled: e.g. `ollama pull qwen2.5:7b`
+    Model pulled: e.g. `ollama pull qwen3-vl:4b` (fits a 6 GB GPU at Q4)
 
     Uses Ollama's native `format: "json"` to guarantee structured output
     without needing to prompt-engineer JSON fences.
@@ -228,7 +225,9 @@ class OllamaPlanner(BasePlanner):
             "messages": messages,
             "stream": False,
             "format": "json",
-            "options": {"temperature": 0.1, "num_predict": 512},
+            "think": False,  # reasoning models: skip the thinking trace, we want the JSON
+            "keep_alive": "10m",
+            "options": {"temperature": 0.0, "num_predict": 3072},
         }
         try:
             resp = requests.post(

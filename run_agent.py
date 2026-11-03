@@ -5,10 +5,8 @@ with the Gradio dashboard; this file only parses arguments and prints.
 """
 
 import os
-import sys
 import argparse
 
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from agent.task_agent import RobotTaskAgent
 from configs.settings import (
@@ -33,7 +31,15 @@ def main():
     parser.add_argument("--no-videos", action="store_true",
                         help="Disable video saving")
     parser.add_argument("--vlm-verify", action="store_true",
-                        help="Enable VLM verification (Tier B)")
+                        help="Enable the (inert) Bedrock VLM second-opinion; it never decides pass/fail")
+    parser.add_argument("--verifier", choices=["perception", "oracle", "none"], default="perception",
+                        help="Who judges the outcome: the camera (default), simulator truth, or nobody")
+    parser.add_argument("--retry", choices=["corrected", "blind"], default="corrected",
+                        help="Retry strategy: feed back the measured error, or just repeat")
+    parser.add_argument("--faults", default="nominal",
+                        choices=["nominal", "noisy", "biased", "slippery"],
+                        help="Inject execution faults (see env/faults.py)")
+    parser.add_argument("--seed", type=int, default=0, help="Seed for sensor noise and injected faults")
     # Default is the real MuJoCo simulation. --mock opts back in to the
     # scripted Bernoulli policy for a fast, dependency-free run.
     parser.add_argument("--mock", action="store_true", default=False,
@@ -47,19 +53,23 @@ def main():
     os.makedirs(LOGS_DIR, exist_ok=True)
 
     print("=" * 60)
-    print("NEXUS-1: LANGUAGE-TO-ACTION ROBOT AGENT")
-    print("Closed-Loop Hierarchical Embodied AI & Physics Verification")
+    print("LANGUAGE-TO-ACTION ROBOT AGENT")
+    print("Plan, act, verify from pixels, retry from the measured error")
     print("=" * 60)
     print(f"\nInstruction: {args.instruction}")
     print(f"Max retries: {args.retries}")
     print(f"Max steps:   {args.steps}")
     print(f"Save videos: {not args.no_videos}")
-    print(f"VLM verify:  {args.vlm_verify}")
+    print(f"Verifier:    {args.verifier}   Retry: {args.retry}   Faults: {args.faults}   Seed: {args.seed}")
     print(f"Mock policy: {args.mock}")
 
     with RobotTaskAgent(
         use_mock_policy=args.mock,
         enable_vlm_verifier=args.vlm_verify,
+        verifier_mode=args.verifier,
+        retry_strategy=args.retry,
+        fault_profile=args.faults,
+        seed=args.seed,
     ) as agent:
 
         policy_info = agent.executor.describe_policy()
@@ -146,6 +156,12 @@ def main():
             print(f"Trace log: {summary['log_path']}")
 
         return result
+
+
+def cli():
+    """Console-script entry point; exit code reflects task success."""
+    result = main()
+    raise SystemExit(0 if result and result.get("success") else 1)
 
 
 if __name__ == "__main__":

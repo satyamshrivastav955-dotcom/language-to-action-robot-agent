@@ -1,7 +1,5 @@
 import os
-from dataclasses import dataclass, field
-from typing import Dict, List, Tuple
-import json
+from typing import Dict, Tuple
 
 PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 OUTPUTS_DIR = os.path.join(PROJECT_ROOT, "outputs")
@@ -13,7 +11,7 @@ BEDROCK_REGION = os.environ.get("AWS_DEFAULT_REGION", "eu-north-1")
 
 # Offline LLM backend (default)
 LLM_BACKEND = os.environ.get("LLM_BACKEND", "ollama")  # "ollama" | "bedrock"
-OLLAMA_MODEL = os.environ.get("OLLAMA_MODEL", "qwen2.5:14b")
+OLLAMA_MODEL = os.environ.get("OLLAMA_MODEL", "qwen3-vl:4b-instruct")
 OLLAMA_HOST = os.environ.get("OLLAMA_HOST", "http://localhost:11434")
 
 # Vision model used by the --vlm-verify second opinion. Separate from

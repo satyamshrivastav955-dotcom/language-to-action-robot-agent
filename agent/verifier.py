@@ -1,11 +1,8 @@
 import numpy as np
-import os
 from typing import Dict, Optional
 import base64
 import cv2
 
-import sys
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from configs.settings import (
     VERIFICATION_TOLERANCE,
@@ -31,9 +28,16 @@ class Verifier:
     It now builds a Bedrock client itself, matching the planner's backend.
     """
 
+    # Where object poses come from. Default = simulator ground truth (the
+    # ORACLE verifier). PerceptionVerifier below swaps in camera-based estimates.
+    observed_by = "oracle"
+    use_target_estimate = False
+
     def __init__(self, env, enable_vlm: bool = False, vlm_client=None,
-                 vlm_model_id: Optional[str] = None, anthropic_client=None):
+                 vlm_model_id: Optional[str] = None, anthropic_client=None,
+                 pose_source=None):
         self.env = env
+        self._pose = pose_source or env.get_object_pose
         self.enable_vlm = enable_vlm
         self.tolerance = VERIFICATION_TOLERANCE
         self.vlm_model_id = vlm_model_id or VLM_MODEL_ID
@@ -78,6 +82,16 @@ class Verifier:
         
         verify_fn = verification_methods.get(action, self._verify_pick_and_place)
         result = verify_fn(obj, target, execution_result)
+        result["observed_by"] = self.observed_by
+
+        # Measured error: where the object is minus where it should be (xy).
+        # This vector is what a corrected retry feeds on.
+        if result.get("object_position") is not None and result.get("target_position") is not None:
+            op, tp = np.asarray(result["object_position"]), np.asarray(result["target_position"])
+            result["error_vector"] = [float(op[0] - tp[0]), float(op[1] - tp[1])]
+            initial = execution_result.get("initial_pos")
+            if initial is not None:
+                result["object_moved"] = bool(np.linalg.norm(op - np.asarray(initial)) > 0.01)
         
         if self.enable_vlm and execution_result.get("frames"):
             vlm_result = self._vlm_verify(subtask, execution_result)
@@ -87,8 +101,8 @@ class Verifier:
     
     def _verify_pick_and_place(self, obj: str, target: str, execution_result: Dict) -> Dict:
         try:
-            object_pos = self.env.get_object_pose(obj)
-        except Exception as e:
+            object_pos = self._pose(obj)
+        except Exception:
             return {
                 "success": False,
                 "reason": f"Object '{obj}' not found in scene",
@@ -100,7 +114,6 @@ class Verifier:
         target_pos = self._get_target_position(target)
         
         distance_2d = np.linalg.norm(object_pos[:2] - target_pos[:2])
-        distance_3d = np.linalg.norm(object_pos - target_pos)
         
         height_ok = True
         if target == "bin":
@@ -123,27 +136,33 @@ class Verifier:
     
     def _verify_stack(self, obj: str, target: str, execution_result: Dict) -> Dict:
         try:
-            object_pos = self.env.get_object_pose(obj)
+            object_pos = self._pose(obj)
         except Exception:
             return {
                 "success": False,
                 "reason": f"Object '{obj}' not found",
             }
         
-        try:
-            target_pos = self.env.get_object_pose(target)
-        except Exception:
-            return {
-                "success": False,
-                "reason": f"Target '{target}' not found",
-            }
+        # A stack target is hidden under the stacked block, so a camera cannot
+        # re-measure it afterwards; use the pose estimated before the attempt.
+        target_pos = execution_result.get("target_pos_est") if self.use_target_estimate else None
+        if target_pos is None:
+            try:
+                target_pos = self._pose(target)
+            except Exception:
+                return {
+                    "success": False,
+                    "reason": f"Target '{target}' not found",
+                }
+        target_pos = np.asarray(target_pos, dtype=float)
         
         distance_horizontal = np.linalg.norm(object_pos[:2] - target_pos[:2])
         
         expected_top = target_pos[2] + BLOCK_SIZE
         height_distance = abs(object_pos[2] - expected_top)
         
-        horizontal_ok = distance_horizontal < self.tolerance * 1.5
+        # A cube overhanging its support by more than a quarter of its width tips.
+        horizontal_ok = distance_horizontal < BLOCK_SIZE * 0.75
         # Must be within half a block of the expected top. The old bound
         # (tolerance*2 = 0.1m) was wider than a whole block, so a block still
         # sitting on the table passed as "stacked".
@@ -172,7 +191,7 @@ class Verifier:
         # fall back to the shared TARGET_REGIONS table. Never hardcode here.
         if target in OBJECT_GROUNDING.values() and target != "bin":
             try:
-                return np.asarray(self.env.get_object_pose(target), dtype=float)
+                return np.asarray(self._pose(target), dtype=float)
             except Exception:
                 pass
 
@@ -184,7 +203,7 @@ class Verifier:
     def _generate_failure_reason(self, distance: float, tolerance: float,
                                    execution_result: Dict, action: str) -> str:
         object_moved = execution_result.get("object_moved", False)
-        
+
         if not object_moved:
             return "Grasp failed - object was not picked up (contact/friction issue)"
         
@@ -283,6 +302,37 @@ class Verifier:
 
         parts = response["output"]["message"]["content"]
         return "".join(p.get("text", "") for p in parts)
+
+
+class PerceptionVerifier(Verifier):
+    """Judges outcomes from a fresh RGB-D capture; never reads simulator state."""
+
+    observed_by = "perception"
+    use_target_estimate = True
+
+    def __init__(self, env, perception, **kwargs):
+        super().__init__(env, pose_source=self._observed_pose, **kwargs)
+        self.perception = perception
+
+    def _observed_pose(self, name: str) -> np.ndarray:
+        pose = self.perception.pose(name)
+        if pose is None:
+            raise KeyError(f"{name} not visible")
+        return pose
+
+    def verify(self, subtask: Dict, execution_result: Dict) -> Dict:
+        self.perception.perceive(park=True)
+        return super().verify(subtask, execution_result)
+
+
+class NullVerifier:
+    """The no-verifier ablation arm: believes the rollout worked."""
+
+    observed_by = "none"
+
+    def verify(self, subtask: Dict, execution_result: Dict) -> Dict:
+        return {"success": True, "reason": "not verified", "observed_by": "none",
+                "unverified": True}
 
 
 def create_verifier(env, enable_vlm: bool = False) -> Verifier:

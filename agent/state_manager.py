@@ -5,9 +5,6 @@ from dataclasses import dataclass, field
 from enum import Enum
 import json
 
-import sys
-import os
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 
 class SubtaskStatus(Enum):
@@ -221,7 +218,7 @@ class TaskStateManager:
         for callback in self._transition_callbacks:
             try:
                 callback(transition)
-            except Exception as e:
+            except Exception:
                 pass
     
     def add_transition_callback(self, callback: Callable):

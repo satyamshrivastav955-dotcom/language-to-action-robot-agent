@@ -10,18 +10,18 @@ front-ends only render its events.
 `execute_instruction()` drains it and returns the final result dict for the CLI.
 """
 
-import os
-import sys
 import time
 from dataclasses import dataclass, field
-from typing import Callable, Dict, Generator, List, Optional
+from typing import Dict, Generator, List, Optional
 
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from agent.planner import create_planner
 from agent.executor import Executor
-from agent.verifier import Verifier
+from agent.verifier import NullVerifier, PerceptionVerifier, Verifier
 from agent.retry_controller import RetryController
+from env.faults import attempt_rng
+from perception import PerceptionSystem
+from perception.overlay import annotate
 from agent.state_manager import TaskStateManager
 from agent.trace_logger import TraceLogger
 from env.so101_env import create_environment
@@ -43,18 +43,53 @@ class ProgressEvent:
     error: Optional[str] = None
     # Set when the planner declined to guess and asked a question instead.
     clarification: Optional[str] = None
+    # Overhead camera view with detections, as the verifier saw it (RGB array).
+    camera_image: Optional[object] = None
 
 
 class RobotTaskAgent:
 
-    def __init__(self, use_mock_policy: bool = True, enable_vlm_verifier: bool = False,
-                 console_output: bool = True, env=None):
+    def __init__(self, use_mock_policy: bool = False, enable_vlm_verifier: bool = False,
+                 console_output: bool = True, env=None, planner=None,
+                 verifier_mode: str = "perception", retry_strategy: str = "corrected",
+                 perception_mode: str = "segmentation", rewind_on_retry: bool = False,
+                 record_frames: bool = True, fault_profile: str = "nominal", seed: int = 0,
+                 record_oracle: bool = True, estimator=None, retry_alpha: float = 0.85):
+        """
+        verifier_mode:   "perception" (camera-based), "oracle" (simulator truth), "none".
+        retry_strategy:  "corrected" (use the measured error) or "blind".
+        perception_mode: "segmentation" / "vlm" (act on camera estimates) or "oracle".
+        rewind_on_retry: restore the pre-subtask world before a retry. Off by default:
+                         a real robot cannot undo a failed attempt.
+        record_oracle:   also score each attempt against simulator truth. Evaluation
+                         logging only; the agent never reads it.
+        """
         self.env = env if env is not None else create_environment()
+        self.seed = seed
+        self.fault_profile = fault_profile
+        self.rewind_on_retry = rewind_on_retry
+        self.record_oracle = record_oracle
+        physics = bool(getattr(self.env, "is_physics_backed", False)) and not use_mock_policy
 
-        self.planner = create_planner()
-        self.executor = Executor(env=self.env, use_mock_policy=use_mock_policy)
-        self.verifier = Verifier(self.env, enable_vlm=enable_vlm_verifier)
-        self.retry_controller = RetryController()
+        self.planner = planner if planner is not None else create_planner()
+
+        self.perception = None
+        if physics:
+            self.perception = PerceptionSystem(self.env, estimator=estimator, seed=seed)
+        acting_perception = self.perception if perception_mode != "oracle" else None
+        self.executor = Executor(env=self.env, use_mock_policy=use_mock_policy,
+                                 perception=acting_perception, record_frames=record_frames)
+
+        if verifier_mode == "none":
+            self.verifier = NullVerifier()
+        elif verifier_mode == "perception" and self.perception is not None:
+            self.verifier = PerceptionVerifier(self.env, self.perception, enable_vlm=enable_vlm_verifier)
+        else:
+            self.verifier = Verifier(self.env, enable_vlm=enable_vlm_verifier)
+        self.verifier_mode = verifier_mode if (verifier_mode != "perception" or self.perception) else "oracle"
+        self._oracle = Verifier(self.env) if (record_oracle and physics) else None
+
+        self.retry_controller = RetryController(strategy=retry_strategy, alpha=retry_alpha)
         self.state_manager = TaskStateManager()
         self.logger = TraceLogger(console_output=console_output)
 
@@ -93,10 +128,13 @@ class RobotTaskAgent:
     def execute_instruction(self, instruction: str,
                             max_retries: Optional[int] = None,
                             max_steps: Optional[int] = None,
-                            save_videos: bool = True) -> Dict:
+                            save_videos: bool = True,
+                            block_positions: Optional[Dict] = None,
+                            reset_world: bool = True) -> Dict:
         """Blocking run. Returns the final result dict (used by the CLI)."""
         final = None
-        for event in self.run(instruction, max_retries, max_steps, save_videos):
+        for event in self.run(instruction, max_retries, max_steps, save_videos, block_positions,
+                              reset_world):
             final = event
 
         if final is None:
@@ -121,7 +159,9 @@ class RobotTaskAgent:
     def run(self, instruction: str,
             max_retries: Optional[int] = None,
             max_steps: Optional[int] = None,
-            save_videos: bool = True) -> Generator[ProgressEvent, None, None]:
+            save_videos: bool = True,
+            block_positions: Optional[Dict] = None,
+            reset_world: bool = True) -> Generator[ProgressEvent, None, None]:
         """Stream the full plan/execute/verify/retry loop as ProgressEvents."""
 
         max_retries = max_retries or self.max_retries
@@ -138,11 +178,18 @@ class RobotTaskAgent:
         self.logger.log_instruction(instruction)
         self.logger.log_policy_disclosure(self.executor.describe_policy())
 
-        self.env.reset()
+        if reset_world:
+            self.env.reset(block_positions)
+        if hasattr(self.env, "set_faults"):
+            self.env.set_faults(self.fault_profile)
 
         object_positions = {}
-        for obj in self.env.object_names:
-            object_positions[obj] = self.env.get_object_pose(obj).tolist()
+        if self.perception is not None:
+            for name, det in self.perception.perceive().items():
+                object_positions[name] = det.xyz.tolist()
+        else:
+            for obj in self.env.object_names:
+                object_positions[obj] = self.env.get_object_pose(obj).tolist()
 
         yield ProgressEvent(status="Planning...", log_text=self._log_text())
 
@@ -278,7 +325,8 @@ class RobotTaskAgent:
         # Snapshot the world as this subtask found it. A failed attempt is
         # rewound to THIS state - not to a factory-reset scene - so retries
         # do not destroy the work of earlier subtasks in the same instruction.
-        pre_subtask_state = self.env.save_state()
+        pre_subtask_state = self.env.save_state() if self.rewind_on_retry else None
+        attempt_log: List[Dict] = []
 
         for attempt in range(1, max_retries + 1):
             if self._stop_requested:
@@ -287,8 +335,10 @@ class RobotTaskAgent:
             attempts = attempt
             view[index]["attempts"] = attempt
 
-            if attempt > 1:
+            if attempt > 1 and pre_subtask_state is not None:
                 self.env.restore_state(pre_subtask_state)
+            if hasattr(self.env, "seed_attempt"):
+                self.env.seed_attempt(attempt_rng(self.seed, index, attempt))
 
             # Diagnosis from the previous failure feeds the next attempt.
             retry_params = self.retry_controller.get_adjusted_parameters(subtask, attempt)
@@ -308,6 +358,39 @@ class RobotTaskAgent:
             )
 
             verification_result = self.verifier.verify(subtask, execution_result)
+            # What the agent believes happened: moved-ness comes from what it
+            # observed, not from simulator state.
+            if verification_result.get("object_moved") is not None:
+                execution_result["object_moved"] = verification_result["object_moved"]
+            elif execution_result.get("perception_failure"):
+                execution_result["object_moved"] = False
+            correction = self.retry_controller.observe(subtask, execution_result, verification_result)
+
+            oracle_ok = None
+            if self._oracle is not None:
+                truth = self._oracle.verify(subtask, {**execution_result, "target_pos_est": None})
+                oracle_ok = bool(truth.get("success"))
+            attempt_log.append({
+                "attempt": attempt,
+                "verdict": bool(verification_result.get("success", False)),
+                "oracle_success": oracle_ok,
+                "observed_by": verification_result.get("observed_by"),
+                "reason": verification_result.get("reason", ""),
+                "error_vector": verification_result.get("error_vector"),
+                "object_position": verification_result.get("object_position"),
+                "grasp_detected": execution_result.get("grasp_detected"),
+                "perception_failure": execution_result.get("perception_failure", False),
+                "correction_applied": (retry_params or {}).get("place_correction"),
+                "correction_next": correction,
+                "video_path": execution_result.get("video_path"),
+            })
+
+            view[index]["attempt_log"] = [
+                {k: a[k] for k in ("attempt", "verdict", "oracle_success", "observed_by")} for a in attempt_log]
+            camera_image = None
+            if self.perception is not None and self.perception.last_rgbd is not None                     and verification_result.get("observed_by") == "perception":
+                camera_image = annotate(self.perception.last_rgbd, self.perception.last,
+                                        verification_result.get("target_position"), obj)
 
             success = verification_result.get("success", False)
             duration = execution_result.get("duration", 0)
@@ -322,7 +405,7 @@ class RobotTaskAgent:
                 status=f"Subtask {subtask_id} - attempt {attempt}: "
                        f"{'SUCCESS' if success else 'FAILED'}",
                 subtasks=_copy_view(view), log_text=self._log_text(),
-                video_path=video_path)
+                video_path=video_path, camera_image=camera_image)
 
             if success:
                 break
@@ -353,7 +436,7 @@ class RobotTaskAgent:
 
         if execution_result is not None:
             self.state_manager.update_object_position(
-                obj, execution_result.get("final_pos", [0, 0, 0]))
+                obj, (verification_result or {}).get("object_position") or [0, 0, 0])
 
         yield ProgressEvent(status=f"Subtask {subtask_id} "
                                    f"{'completed' if success else 'failed'}",
@@ -370,6 +453,9 @@ class RobotTaskAgent:
             "retries": max(0, attempts - 1),
             "duration": execution_result.get("duration", 0) if execution_result else 0,
             "video_path": video_path,
+            "believed_success": bool(success),
+            "oracle_success": attempt_log[-1]["oracle_success"] if attempt_log else None,
+            "attempt_log": attempt_log,
         }
 
     def _log_text(self) -> str:
@@ -392,7 +478,7 @@ def _copy_view(view: List[Dict]) -> List[Dict]:
     return [dict(v) for v in view]
 
 
-def create_agent(use_mock_policy: bool = True, enable_vlm_verifier: bool = False,
+def create_agent(use_mock_policy: bool = False, enable_vlm_verifier: bool = False,
                  console_output: bool = True) -> RobotTaskAgent:
     return RobotTaskAgent(use_mock_policy=use_mock_policy,
                           enable_vlm_verifier=enable_vlm_verifier,

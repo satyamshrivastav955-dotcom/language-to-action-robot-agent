@@ -5,8 +5,6 @@ from typing import Dict, List, Optional
 from datetime import datetime
 import threading
 
-import sys
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from configs.settings import LOGS_DIR
 

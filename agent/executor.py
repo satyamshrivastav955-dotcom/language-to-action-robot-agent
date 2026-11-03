@@ -2,11 +2,7 @@ import numpy as np
 import os
 import time
 from typing import Dict, Optional, List
-import cv2
-import imageio
 
-import sys
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from env.so101_env import SO101Environment
 from configs.settings import (
@@ -114,18 +110,34 @@ class ScriptedMuJoCoPolicy:
         self._phase_step = 0
 
     def begin_attempt(self, action: str, obj: str, target: str,
-                      retry_params: Optional[Dict] = None):
-        """Build the waypoint plan for this attempt from live object poses."""
-        retry_params = retry_params or {}
-        offset = np.array(retry_params.get("position_offset", [0.0, 0.0, 0.0]), dtype=float)
+                      retry_params: Optional[Dict] = None, pose_fn=None):
+        """Build the waypoint plan for this attempt.
 
-        obj_pos = np.asarray(self.env.get_object_pose(obj), dtype=float)
+        `pose_fn(name)` supplies object poses: estimates from perception in the
+        default pipeline, simulator truth only when none is given. Injected
+        faults (env.faults) perturb where the arm ACTUALLY grasps and releases,
+        after the agent has decided where to; `place_correction` in
+        retry_params shifts the commanded release to compensate.
+        """
+        retry_params = retry_params or {}
+        pose_fn = pose_fn or self.env.get_object_pose
+        correction = np.array(retry_params.get("place_correction", [0.0, 0.0, 0.0]), dtype=float)
+
+        obj_pos = np.asarray(pose_fn(obj), dtype=float)
+
+        # Fault draws happen in a fixed order so arms stay paired (see env.faults).
+        faults = getattr(self.env, "faults", None)
+        rng = getattr(self.env, "_fault_rng", np.random.default_rng(0))
+        grasp_err = rng.standard_normal(2) * (faults.grasp_noise_std if faults else 0.0)
+        place_err = rng.standard_normal(2) * (faults.place_noise_std if faults else 0.0)
+        if faults:
+            place_err = place_err + np.asarray(faults.place_bias, dtype=float)
 
         if target == "bin":
             place = np.asarray(TARGET_REGIONS["bin"], dtype=float).copy()
             release_z = self.RELEASE_Z
         else:
-            tgt = np.asarray(self.env.get_object_pose(target), dtype=float)
+            tgt = np.asarray(pose_fn(target), dtype=float)
             place = tgt.copy()
             place[2] = tgt[2] + BLOCK_SIZE  # stack on top
             # The carried block hangs ~6mm below the grip site, so the site has
@@ -135,8 +147,10 @@ class ScriptedMuJoCoPolicy:
             release_z = tgt[2] + BLOCK_SIZE + 0.006 + 0.008
         self._stack_target = None if target == "bin" else target
 
-        # Retry nudges the grasp, not the goal: the target is ground truth.
-        grasp_xy = obj_pos[:2] + offset[:2]
+        self.intended_place = place.copy()           # what the task asks for
+        place[:2] = place[:2] + correction[:2]       # what the agent commands
+        place[:2] = place[:2] + place_err            # where the arm actually goes
+        grasp_xy = obj_pos[:2] + grasp_err
 
         self._plan = [
             {"name": "approach", "xyz": [grasp_xy[0], grasp_xy[1], self.APPROACH_Z],
@@ -214,7 +228,7 @@ class ScriptedMuJoCoPolicy:
             actual = self.env.get_end_effector_pose()
             err = goal - actual
             if np.linalg.norm(err) > 0.005:
-                self._cached_q = self.env.solve_ik(goal + err * 0.9)
+                self._cached_q = self.env.solve_ik(goal + err * 0.9, restarts=0)
 
         self._phase_step += 1
 
@@ -257,8 +271,13 @@ class ScriptedMuJoCoPolicy:
 class Executor:
     
     def __init__(self, policy: Optional[object] = None, env: Optional[SO101Environment] = None,
-                 use_mock_policy: bool = True):
+                 use_mock_policy: bool = True, perception=None, record_frames: bool = True):
         self.env = env if env else SO101Environment()
+        # With a PerceptionSystem the executor acts on camera estimates; without
+        # one it reads simulator poses (oracle mode, for upper-bound comparisons).
+        self.perception = perception
+        self.record_frames = record_frames
+        self.video_dir: Optional[str] = None  # defaults to configs.settings.VIDEOS_DIR
 
         # policy_type must be set on EVERY branch - it drives the rollout path
         # below. Previously it was only assigned in the elif/else, so passing an
@@ -367,15 +386,34 @@ class Executor:
         # reset. Only the ARM is re-homed between subtasks (blocks untouched):
         # each pick starts from the canonical configuration, like a real
         # manipulation cell returning to home between jobs.
+        pose_fn = None
+        target_pos_est = None
+        if self.perception is not None and self.policy_type == "scripted_sim":
+            # Look first (arm parked out of view), then act on what was seen.
+            self.perception.perceive(park=True)
+            pose_fn = self.perception.pose
+            needed = [obj] + ([] if target == "bin" else [target])
+            if any(self.perception.pose(n) is None for n in needed):
+                return {"success": None, "frames": [], "video_path": None,
+                        "initial_pos": None, "final_pos": None, "object_moved": False,
+                        "grasp_detected": False, "perception_failure": True,
+                        "duration": time.time() - start_time, "steps": 0, "prompt": prompt,
+                        "retry_params": retry_params or {}, "outcome_source": "policy"}
+            if target != "bin":
+                target_pos_est = np.array(self.perception.pose(target))
+
         if hasattr(self.env, "reset_arm"):
             self.env.reset_arm()
+
+        if hasattr(self.env, "grasp_attached"):
+            self.env.grasp_attached = False
 
         if self.policy_type == "mock" and hasattr(self.policy, 'begin_attempt'):
             self.policy.begin_attempt(retry_params)
         elif self.policy_type == "scripted_sim":
-            self.policy.begin_attempt(action, obj, target, retry_params)
+            self.policy.begin_attempt(action, obj, target, retry_params, pose_fn=pose_fn)
 
-        initial_object_pos = self.env.get_object_pose(obj)
+        initial_object_pos = (np.array(pose_fn(obj)) if pose_fn else self.env.get_object_pose(obj))
 
         obs = self.env._get_observation()
 
@@ -398,9 +436,11 @@ class Executor:
 
             obs, reward, done, info = self.env.step(action_cmd)
 
-            frame = self.env.render(phase=self.policy.current_phase() if hasattr(self.policy, 'current_phase') else None)
-            if frame is not None:
-                self.current_frames.append(frame)
+            if self.record_frames:
+                frame = self.env.render(
+                    phase=self.policy.current_phase() if hasattr(self.policy, 'current_phase') else None)
+                if frame is not None:
+                    self.current_frames.append(frame)
 
             if self.policy_type == "scripted_sim":
                 if self.policy.is_done():
@@ -413,7 +453,7 @@ class Executor:
             # otherwise the verifier measures it mid-fall.
             for i in range(40):
                 self.env.step(np.append(obs[:6], 0.0))
-                if i % 4 == 0:
+                if self.record_frames and i % 4 == 0:
                     frame = self.env.render()
                     if frame is not None:
                         self.current_frames.append(frame)
@@ -431,7 +471,7 @@ class Executor:
             self.env.simulate_pick_and_place(obj, target, will_succeed)
             final_object_pos = self.env.get_object_pose(obj)
 
-        for _ in range(5):
+        for _ in range(5 if self.record_frames else 0):
             frame = self.env.render()
             if frame is not None:
                 self.current_frames.append(frame)
@@ -447,10 +487,16 @@ class Executor:
             "frames": self.current_frames,
             "video_path": video_path,
             "initial_pos": initial_object_pos,
-            "final_pos": final_object_pos,
+            "final_pos": final_object_pos,  # simulator truth: evaluation/logging only
+            # Gripper-closure feedback: did the grasp take hold of a block? The
+            # verifier, not this flag, decides whether the TASK succeeded.
+            "grasp_detected": bool(getattr(self.env, "grasp_attached", False)),
+            "target_pos_est": target_pos_est,
+            "intended_place": getattr(self.policy, "intended_place", None),
             "object_moved": not np.allclose(initial_object_pos, final_object_pos, atol=0.01),
             "duration": elapsed_time,
             "steps": len(self.current_frames),
+            "perception_failure": False,
             "prompt": prompt,
             "retry_params": retry_params or {},
             # "scripted" means the block was teleported to a predetermined
@@ -484,36 +530,16 @@ class Executor:
         if not self.current_frames:
             return None
 
-        os.makedirs(VIDEOS_DIR, exist_ok=True)
-        video_path = os.path.join(VIDEOS_DIR, f"{name}.mp4")
+        vdir = self.video_dir or VIDEOS_DIR
+        os.makedirs(vdir, exist_ok=True)
+        video_path = os.path.join(vdir, f"{name}.mp4")
 
-        # OpenCV first: it is a hard dependency here and always present, whereas
-        # imageio needs the separate imageio-ffmpeg package. The old order tried
-        # imageio first and printed a scary "expected bytes, NoneType found"
-        # error on every single subtask before silently succeeding via OpenCV.
-        try:
-            h, w = self.current_frames[0].shape[:2]
-            fourcc = cv2.VideoWriter_fourcc(*'mp4v')
-            writer = cv2.VideoWriter(video_path, fourcc, fps, (w, h))
-            if not writer.isOpened():
-                raise RuntimeError("cv2.VideoWriter failed to open")
-            for frame in self.current_frames:
-                writer.write(cv2.cvtColor(frame, cv2.COLOR_RGB2BGR))
-            writer.release()
-            print(f"[Executor] Saved video ({len(self.current_frames)} frames) to {video_path}")
-            return video_path
-        except Exception as e:
-            print(f"[Executor] OpenCV video write failed ({type(e).__name__}: {e}); trying imageio")
+        from env.video import write_mp4
+        path = write_mp4(self.current_frames, video_path, fps=fps)
+        if path:
+            print(f"[Executor] Saved video ({len(self.current_frames)} frames) to {path}")
+        return path
 
-        try:
-            imageio.mimsave(video_path, self.current_frames, fps=fps)
-            print(f"[Executor] Saved video to {video_path} (imageio)")
-            return video_path
-        except Exception as e:
-            print(f"[Executor] Could not save video: {type(e).__name__}: {e}")
-            print("[Executor] Hint: pip install imageio-ffmpeg")
-            return None
-    
     def close(self):
         self.env.close()
 
@@ -538,7 +564,7 @@ if __name__ == "__main__":
     print(f"\nRunning test subtask: {test_subtask}")
     result = executor.run_subtask(test_subtask, max_steps=50, save_video=True, video_name="test_subtask")
     
-    print(f"\nSubtask result:")
+    print("\nSubtask result:")
     print(f"  Duration: {result['duration']:.2f}s")
     print(f"  Steps: {result['steps']}")
     print(f"  Object moved: {result['object_moved']}")
