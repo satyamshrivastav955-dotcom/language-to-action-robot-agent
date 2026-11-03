@@ -12,8 +12,3 @@ imageio-ffmpeg>=0.4.9
 
 # Dashboard
 gradio>=6.0.0
-
-# ---------------------------------------------------------------------------
-# Optional: AWS Bedrock backend (set LLM_BACKEND=bedrock)
-# pip install boto3
-# ---------------------------------------------------------------------------

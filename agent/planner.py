@@ -1,7 +1,6 @@
 """LLM task planner with pluggable backends.
 
 Default backend: Ollama (local, offline, zero API cost).
-Optional backend: AWS Bedrock (set LLM_BACKEND=bedrock).
 
 Both backends share all plan validation, grounding and heuristic fallback
 logic from BasePlanner. Only _call_llm differs between them.
@@ -15,11 +14,8 @@ from configs.settings import (
     PLANNER_SYSTEM_PROMPT,
     PLANNER_EXAMPLES,
     OBJECT_GROUNDING,
-    LLM_BACKEND,
     OLLAMA_MODEL,
     OLLAMA_HOST,
-    BEDROCK_MODEL_ID,
-    BEDROCK_REGION,
 )
 
 
@@ -247,84 +243,12 @@ class OllamaPlanner(BasePlanner):
         return self._extract_json(content)
 
 
-class BedrockPlanner(BasePlanner):
-    """AWS Bedrock planner (cloud, requires boto3 + AWS credentials).
-
-    Activate with: LLM_BACKEND=bedrock
-    """
-
-    def __init__(self, model_id: str = BEDROCK_MODEL_ID, region: str = BEDROCK_REGION):
-        super().__init__()
-        self.model_id = model_id
-        self.region = region
-        self.backend_name = f"bedrock/{model_id}"
-
-        try:
-            import boto3
-            from botocore.config import Config
-            config = Config(
-                region_name=self.region,
-                retries={"max_attempts": 3, "mode": "standard"}
-            )
-            self.client = boto3.client("bedrock-runtime", config=config)
-            print(f"[Planner] Backend: AWS Bedrock  model={model_id}  region={region}")
-        except ImportError:
-            raise ImportError(
-                "boto3 is required for the Bedrock backend. "
-                "Install with: pip install boto3"
-            )
-
-    def _call_llm(self, instruction: str) -> Dict:
-        from botocore.exceptions import ClientError, BotoCoreError
-        messages = self._build_messages(instruction)
-        request_body = {
-            "messages": messages,
-            "max_tokens": 1024,
-            "temperature": 0.1,
-        }
-        try:
-            response = self.client.invoke_model(
-                modelId=self.model_id,
-                body=json.dumps(request_body),
-                contentType="application/json",
-                accept="application/json",
-            )
-        except (ClientError, BotoCoreError) as e:
-            raise RuntimeError(f"Bedrock call failed: {e}") from e
-
-        body = json.loads(response["body"].read())
-        text = self._extract_response_text(body)
-        return self._extract_json(text)
-
-    def _extract_response_text(self, body: Dict) -> str:
-        if "choices" in body:
-            return body["choices"][0]["message"]["content"]
-        if "output" in body:
-            out = body["output"]
-            return out.get("content", "") if isinstance(out, dict) else out
-        if "generation" in body:
-            return body["generation"]
-        if "results" in body:
-            return body["results"][0].get("outputText", "")
-        if "content" in body:
-            c = body["content"]
-            return c[0].get("text", "") if isinstance(c, list) else c
-        return str(body)
-
-
 # ---------------------------------------------------------------------------
 # Factory
 # ---------------------------------------------------------------------------
 
 def create_planner(backend: Optional[str] = None) -> BasePlanner:
-    """Return the appropriate planner for the configured or requested backend.
-
-    Args:
-        backend: "ollama" | "bedrock" | None (reads LLM_BACKEND env/setting).
-    """
-    backend = (backend or LLM_BACKEND).lower()
-    if backend == "bedrock":
-        return BedrockPlanner()
+    """Return the local Ollama planner (the only backend; no cloud dependency)."""
     return OllamaPlanner()
 
 
@@ -339,10 +263,9 @@ Planner = OllamaPlanner
 if __name__ == "__main__":
     import argparse
     p = argparse.ArgumentParser()
-    p.add_argument("--backend", default=None)
     args = p.parse_args()
 
-    planner = create_planner(args.backend)
+    planner = create_planner()
     for instr in [
         "put the red block in the bin",
         "stack the blue block on the green block",

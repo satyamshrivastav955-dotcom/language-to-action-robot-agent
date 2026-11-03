@@ -1,31 +1,20 @@
 import numpy as np
-from typing import Dict, Optional
-import base64
-import cv2
-
+from typing import Dict
 
 from configs.settings import (
     VERIFICATION_TOLERANCE,
     OBJECT_GROUNDING,
-    VLM_VERIFIER_PROMPT,
     TARGET_REGIONS,
     BIN_MIN_HEIGHT,
     BLOCK_SIZE,
-    BEDROCK_REGION,
-    VLM_MODEL_ID,
 )
 
 
 class Verifier:
-    """Geometric success check, with an optional VLM second opinion.
+    """Geometric success check on an object's pose against its target.
 
-    Tier A (always): compare the object's pose against the target region.
-    Tier B (--vlm-verify): ask a vision model to judge the final frame.
-
-    Tier B previously could not run at all - `enable_vlm` was plumbed through
-    but `anthropic_client` was only settable via the constructor and no caller
-    passed one, so every call short-circuited on "VLM client not available".
-    It now builds a Bedrock client itself, matching the planner's backend.
+    Where the pose comes from decides who the verifier is: simulator truth by
+    default (the oracle), camera estimates in PerceptionVerifier below.
     """
 
     # Where object poses come from. Default = simulator ground truth (the
@@ -33,42 +22,11 @@ class Verifier:
     observed_by = "oracle"
     use_target_estimate = False
 
-    def __init__(self, env, enable_vlm: bool = False, vlm_client=None,
-                 vlm_model_id: Optional[str] = None, anthropic_client=None,
-                 pose_source=None):
+    def __init__(self, env, pose_source=None):
         self.env = env
         self._pose = pose_source or env.get_object_pose
-        self.enable_vlm = enable_vlm
         self.tolerance = VERIFICATION_TOLERANCE
-        self.vlm_model_id = vlm_model_id or VLM_MODEL_ID
 
-        # `anthropic_client` is the old keyword; accept it so existing callers
-        # keep working, but treat it as a generic VLM client.
-        self.vlm_client = vlm_client or anthropic_client
-        self.vlm_unavailable_reason: Optional[str] = None
-
-        if self.enable_vlm and self.vlm_client is None:
-            self.vlm_client = self._build_bedrock_client()
-
-    def _build_bedrock_client(self):
-        try:
-            import boto3
-            from botocore.config import Config
-
-            client = boto3.client(
-                "bedrock-runtime",
-                config=Config(region_name=BEDROCK_REGION,
-                              retries={"max_attempts": 2, "mode": "standard"}),
-            )
-            print(f"[Verifier] VLM verification enabled via Bedrock ({self.vlm_model_id})")
-            return client
-        except Exception as e:
-            self.vlm_unavailable_reason = f"could not create Bedrock client: {e}"
-            print(f"[Verifier] VLM verification requested but unavailable - "
-                  f"{self.vlm_unavailable_reason}")
-            return None
-
-    
     def verify(self, subtask: Dict, execution_result: Dict) -> Dict:
         action = subtask.get("action", "pick_and_place")
         obj = subtask.get("object", "red_block")
@@ -93,9 +51,6 @@ class Verifier:
             if initial is not None:
                 result["object_moved"] = bool(np.linalg.norm(op - np.asarray(initial)) > 0.01)
         
-        if self.enable_vlm and execution_result.get("frames"):
-            vlm_result = self._vlm_verify(subtask, execution_result)
-            result["vlm_verification"] = vlm_result
         
         return result
     
@@ -214,94 +169,6 @@ class Verifier:
             return f"Target missed by moderate margin ({distance:.2f}m) - possible timing issue"
         else:
             return f"Close to target but outside tolerance ({distance:.2f}m > {tolerance:.2f}m)"
-    
-    def _vlm_verify(self, subtask: Dict, execution_result: Dict) -> Dict:
-        if not self.vlm_client:
-            reason = self.vlm_unavailable_reason or "VLM client not available"
-            return {"success": None, "reason": reason}
-
-        frames = execution_result.get("frames", [])
-        if not frames:
-            return {"success": None, "reason": "No frames available"}
-
-        final_frame = frames[-1]
-
-        task_description = (f"{subtask.get('action', 'move')} "
-                            f"{subtask.get('object', 'object')} to "
-                            f"{subtask.get('target', 'target')}")
-        prompt = VLM_VERIFIER_PROMPT.format(task_description=task_description)
-
-        try:
-            # Frames are RGB in-process; cv2 encodes BGR, so convert or the
-            # model is shown colour-swapped blocks - fatal when the task is
-            # literally "is the red block in the bin".
-            bgr = cv2.cvtColor(final_frame, cv2.COLOR_RGB2BGR)
-            ok, buffer = cv2.imencode('.jpg', bgr)
-            if not ok:
-                return {"success": None, "reason": "Failed to encode frame as JPEG"}
-            img_bytes = buffer.tobytes()
-
-            vlm_response = self._invoke_vlm(img_bytes, prompt)
-
-            upper = vlm_response.upper()
-            if "SUCCESS" in upper:
-                success = True
-            elif "FAIL" in upper:
-                success = False
-            else:
-                # An unparseable answer is not a failure verdict - saying so
-                # keeps it from silently counting as one.
-                return {"success": None,
-                        "reason": f"Unparseable VLM response: {vlm_response[:200]}",
-                        "raw_response": vlm_response}
-
-            reason = vlm_response.split(":", 1)[-1].strip() if ":" in vlm_response else vlm_response
-
-            return {"success": success, "reason": reason, "raw_response": vlm_response}
-        except Exception as e:
-            return {"success": None, "reason": f"VLM error: {type(e).__name__}: {e}"}
-
-    def _invoke_vlm(self, img_bytes: bytes, prompt: str) -> str:
-        """Call the VLM and return its text.
-
-        Supports both a Bedrock runtime client (boto3) and an Anthropic-style
-        client, since either may be injected.
-        """
-        img_base64 = base64.b64encode(img_bytes).decode("utf-8")
-
-        # Anthropic-style SDK client.
-        if hasattr(self.vlm_client, "messages"):
-            response = self.vlm_client.messages.create(
-                model=self.vlm_model_id,
-                max_tokens=256,
-                messages=[{
-                    "role": "user",
-                    "content": [
-                        {"type": "image",
-                         "source": {"type": "base64", "media_type": "image/jpeg",
-                                    "data": img_base64}},
-                        {"type": "text", "text": prompt},
-                    ],
-                }],
-            )
-            return response.content[0].text
-
-        # Bedrock runtime client. Converse() gives one payload shape across
-        # model families, so we do not have to hand-roll per-vendor JSON.
-        response = self.vlm_client.converse(
-            modelId=self.vlm_model_id,
-            messages=[{
-                "role": "user",
-                "content": [
-                    {"image": {"format": "jpeg", "source": {"bytes": img_bytes}}},
-                    {"text": prompt},
-                ],
-            }],
-            inferenceConfig={"maxTokens": 256, "temperature": 0.0},
-        )
-
-        parts = response["output"]["message"]["content"]
-        return "".join(p.get("text", "") for p in parts)
 
 
 class PerceptionVerifier(Verifier):
@@ -335,8 +202,8 @@ class NullVerifier:
                 "unverified": True}
 
 
-def create_verifier(env, enable_vlm: bool = False) -> Verifier:
-    return Verifier(env, enable_vlm=enable_vlm)
+def create_verifier(env) -> Verifier:
+    return Verifier(env)
 
 
 if __name__ == "__main__":

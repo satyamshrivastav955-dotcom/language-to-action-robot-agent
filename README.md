@@ -41,7 +41,7 @@ flowchart LR
 
 | Piece | Where | Notes |
 |---|---|---|
-| Planner | [`agent/planner.py`](agent/planner.py) | Ollama (default `qwen3-vl:4b-instruct`), optional Bedrock, labelled regex fallback when no model answers |
+| Planner | [`agent/planner.py`](agent/planner.py) | Ollama (default `qwen3-vl:4b-instruct`), labelled regex fallback when no model answers (no cloud dependency) |
 | Skills | [`agent/executor.py`](agent/executor.py), [`env/so101_env.py`](env/so101_env.py) | Waypoint controller + damped-least-squares IK with restarts; kinematic grasp assist during carry |
 | Perception | [`perception/`](perception) | Colour segmentation + depth (1-2 mm in the clean scene); optional Qwen3-VL point grounding |
 | Verifier / retry | [`agent/verifier.py`](agent/verifier.py), [`agent/retry_controller.py`](agent/retry_controller.py) | Camera, oracle or none; blind or error-corrected retry |

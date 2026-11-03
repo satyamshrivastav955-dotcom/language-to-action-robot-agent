@@ -58,4 +58,4 @@ Newest first. Each entry: context, decision, consequence.
 
 - **LeRobot dataset compatibility:** not attempted. A faithful v3 dataset export needs verification against the current LeRobot release, which I did not do.
 - **ROS 2 bridge:** `adapters/ros2_bridge.py` is a short, untested starting point (no ROS 2 install available).
-- **VLM second-opinion verifier (Bedrock):** left in `agent/verifier.py` as an inert option; the camera verifier replaced it as the verifier that decides.
+- **Cloud/Bedrock paths removed.** The Bedrock planner and the Bedrock VLM second-opinion verifier were dead or decorative (the verdict never affected pass/fail) and contradicted the local-only goal; the camera verifier replaced them.

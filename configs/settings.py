@@ -6,17 +6,9 @@ OUTPUTS_DIR = os.path.join(PROJECT_ROOT, "outputs")
 VIDEOS_DIR = os.path.join(OUTPUTS_DIR, "videos")
 LOGS_DIR = os.path.join(OUTPUTS_DIR, "logs")
 
-BEDROCK_MODEL_ID = os.environ.get("BEDROCK_MODEL_ID", "zai.glm-5")
-BEDROCK_REGION = os.environ.get("AWS_DEFAULT_REGION", "eu-north-1")
-
-# Offline LLM backend (default)
-LLM_BACKEND = os.environ.get("LLM_BACKEND", "ollama")  # "ollama" | "bedrock"
+# Local LLM via Ollama (no cloud dependency)
 OLLAMA_MODEL = os.environ.get("OLLAMA_MODEL", "qwen3-vl:4b-instruct")
 OLLAMA_HOST = os.environ.get("OLLAMA_HOST", "http://localhost:11434")
-
-# Vision model used by the --vlm-verify second opinion. Separate from
-# BEDROCK_MODEL_ID because the planner's model need not be multimodal.
-VLM_MODEL_ID = os.environ.get("VLM_MODEL_ID", BEDROCK_MODEL_ID)
 
 MAX_RETRIES_PER_SUBTASK = 3
 VERIFICATION_TOLERANCE = 0.05
@@ -136,13 +128,3 @@ PLANNER_EXAMPLES = [
         ]}
     },
 ]
-
-VLM_VERIFIER_PROMPT = """Look at this image from a robot workspace. Answer the question about whether the task was completed successfully.
-
-Task: {task_description}
-
-Answer with:
-1. "SUCCESS" or "FAIL"
-2. A brief explanation (one sentence)
-
-Format: SUCCESS/FAIL: explanation"""

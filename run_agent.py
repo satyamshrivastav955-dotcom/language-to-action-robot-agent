@@ -30,8 +30,6 @@ def main():
                         help=f"Max steps per rollout (default: {MAX_STEPS_PER_ROLLOUT})")
     parser.add_argument("--no-videos", action="store_true",
                         help="Disable video saving")
-    parser.add_argument("--vlm-verify", action="store_true",
-                        help="Enable the (inert) Bedrock VLM second-opinion; it never decides pass/fail")
     parser.add_argument("--verifier", choices=["perception", "oracle", "none"], default="perception",
                         help="Who judges the outcome: the camera (default), simulator truth, or nobody")
     parser.add_argument("--retry", choices=["corrected", "blind"], default="corrected",
@@ -65,7 +63,6 @@ def main():
 
     with RobotTaskAgent(
         use_mock_policy=args.mock,
-        enable_vlm_verifier=args.vlm_verify,
         verifier_mode=args.verifier,
         retry_strategy=args.retry,
         fault_profile=args.faults,

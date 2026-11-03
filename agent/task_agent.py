@@ -49,7 +49,7 @@ class ProgressEvent:
 
 class RobotTaskAgent:
 
-    def __init__(self, use_mock_policy: bool = False, enable_vlm_verifier: bool = False,
+    def __init__(self, use_mock_policy: bool = False,
                  console_output: bool = True, env=None, planner=None,
                  verifier_mode: str = "perception", retry_strategy: str = "corrected",
                  perception_mode: str = "segmentation", rewind_on_retry: bool = False,
@@ -83,9 +83,9 @@ class RobotTaskAgent:
         if verifier_mode == "none":
             self.verifier = NullVerifier()
         elif verifier_mode == "perception" and self.perception is not None:
-            self.verifier = PerceptionVerifier(self.env, self.perception, enable_vlm=enable_vlm_verifier)
+            self.verifier = PerceptionVerifier(self.env, self.perception)
         else:
-            self.verifier = Verifier(self.env, enable_vlm=enable_vlm_verifier)
+            self.verifier = Verifier(self.env)
         self.verifier_mode = verifier_mode if (verifier_mode != "perception" or self.perception) else "oracle"
         self._oracle = Verifier(self.env) if (record_oracle and physics) else None
 
@@ -478,8 +478,7 @@ def _copy_view(view: List[Dict]) -> List[Dict]:
     return [dict(v) for v in view]
 
 
-def create_agent(use_mock_policy: bool = False, enable_vlm_verifier: bool = False,
+def create_agent(use_mock_policy: bool = False,
                  console_output: bool = True) -> RobotTaskAgent:
     return RobotTaskAgent(use_mock_policy=use_mock_policy,
-                          enable_vlm_verifier=enable_vlm_verifier,
                           console_output=console_output)
