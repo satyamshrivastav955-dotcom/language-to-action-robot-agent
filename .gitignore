@@ -46,3 +46,8 @@ Thumbs.db
 *.log
 outputs/logs/
 outputs/videos/
+
+# Benchmark scratch (the .json results are the record)
+results/*.jsonl
+results/*.log
+results/smoke*
