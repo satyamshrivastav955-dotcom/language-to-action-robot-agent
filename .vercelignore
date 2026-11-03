@@ -1,0 +1,6 @@
+# Deploy only the static viewer. Without this, Vercel sees app.py / pyproject.toml
+# in the repo root and tries to build the project as a Python app.
+*
+!web
+!web/**
+!vercel.json
