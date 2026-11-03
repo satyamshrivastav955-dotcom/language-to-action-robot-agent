@@ -1,0 +1,11 @@
+.git
+.venv
+__pycache__
+*.pyc
+results
+outputs
+web
+docs
+assets
+node_modules
+.claude
