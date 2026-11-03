@@ -1,7 +1,6 @@
 import numpy as np
 import os
-import time
-from typing import Dict, Optional, Tuple, List
+from typing import Dict, Optional, Tuple
 import cv2
 
 try:
@@ -11,9 +10,8 @@ except ImportError:
     MUJOCO_AVAILABLE = False
     print("[Warning] MuJoCo not available, using mock environment")
 
-import sys
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
+from env.faults import PROFILES, FaultProfile
 from configs.settings import (
     HOME_POSITION_DEG,
     OBJECT_GROUNDING,
@@ -50,8 +48,10 @@ class MockSO101Environment:
         }
         self._object_positions["bin"] = np.array(TARGET_REGIONS["bin"], dtype=float)
 
-    def reset(self) -> np.ndarray:
+    def reset(self, block_positions: Optional[Dict] = None) -> np.ndarray:
         self._reset_object_positions()
+        for name, pos in (block_positions or {}).items():
+            self._object_positions[name] = np.array(pos, dtype=float)
         self._joint_positions = self.home_position_rad.copy()
         self._frame_count = 0
         self._step_count = 0
@@ -227,7 +227,11 @@ class SO101Environment(MockSO101Environment):
     # Shoulder (joint2) pivot height from scene.xml: base 0.02 + 0.06 + 0.04.
     SHOULDER_Z = 0.12
     GRIPPER_OPEN = 0.0
-    GRIPPER_CLOSED = 0.0135
+    # Finger travel (m) that puts each pad against a 4 cm block face (pads start at
+    # +-0.033 from the centreline, pad half-thickness 0.006). Travelling the full
+    # 0.0135 buries the pads 6.5 mm in the block and the penetration is resolved
+    # violently on release, flinging the block off a stack.
+    GRIPPER_CLOSED = 0.0068
 
     def __init__(self, xml_path: Optional[str] = None, render_mode: str = "rgb_array"):
         super().__init__(xml_path=xml_path, render_mode=render_mode)
@@ -241,6 +245,14 @@ class SO101Environment(MockSO101Environment):
         self.load_error: Optional[str] = None
         self._grasped: Optional[str] = None
         self._grasp_offset = np.zeros(3)
+        self.faults: FaultProfile = PROFILES["nominal"]
+        self._fault_rng = np.random.default_rng(0)
+        self._slip_at: Optional[int] = None
+        self._slipped = False
+        self._carry_steps = 0
+        self.grasp_attached = False  # did the current attempt ever attach a block
+        self._sensor_renderer = None
+        self._sensor_size = None
 
         if not MUJOCO_AVAILABLE:
             self.load_error = "mujoco package not installed"
@@ -292,15 +304,21 @@ class SO101Environment(MockSO101Environment):
     # Core gym-style API
     # ------------------------------------------------------------------
 
-    def reset(self) -> np.ndarray:
+    def reset(self, block_positions: Optional[Dict] = None) -> np.ndarray:
         if not self.is_physics_backed:
-            return super().reset()
+            return super().reset(block_positions)
 
         mujoco.mj_resetData(self.model, self.data)
         self._grasped = None
+        self._slip_at = None
+        self._slipped = False
+        self._carry_steps = 0
+        self.grasp_attached = False
 
-        # Blocks back to the canonical settings positions, upright, at rest.
-        for name, pos in BLOCK_START_POSITIONS.items():
+        # Blocks to the canonical positions (or the caller's), upright, at rest.
+        starts = dict(BLOCK_START_POSITIONS)
+        starts.update({k: tuple(v) for k, v in (block_positions or {}).items()})
+        for name, pos in starts.items():
             adr = self._block_qpos_adr[name]
             self.data.qpos[adr:adr + 3] = pos
             self.data.qpos[adr + 3:adr + 7] = [1, 0, 0, 0]
@@ -362,6 +380,74 @@ class SO101Environment(MockSO101Environment):
         self._grasped = None
         mujoco.mj_forward(self.model, self.data)
 
+    def set_faults(self, profile):
+        """Select a FaultProfile (or its name) for subsequent attempts."""
+        self.faults = PROFILES[profile] if isinstance(profile, str) else profile
+
+    def seed_attempt(self, rng: np.random.Generator):
+        """Install the per-attempt RNG that drives injected faults."""
+        self._fault_rng = rng
+        self.grasp_attached = False
+
+    def park_arm(self):
+        """Stow the arm upright beside the base so the overhead camera sees the table.
+
+        Teleports the six arm joints to zero (a vertical arm at x=0) with the
+        gripper open and lets blocks settle. Stands in for 'the arm retreats out
+        of the camera's view'; the time that would take is not modelled.
+        """
+        if not self.is_physics_backed:
+            return
+        if self._grasped is not None:
+            self._release_grasped()
+        for adr in self._arm_qpos_adr:
+            self.data.qpos[adr] = 0.0
+        for adr in self._arm_dof_adr:
+            self.data.qvel[adr] = 0.0
+        self.data.ctrl[:6] = 0.0
+        self.data.ctrl[6:8] = self.GRIPPER_OPEN
+        mujoco.mj_forward(self.model, self.data)
+        for _ in range(20):
+            mujoco.mj_step(self.model, self.data)
+
+    def capture_rgbd(self, camera: str = "camera2", width: int = 640, height: int = 480,
+                     rgb_noise: float = 2.0, depth_noise: float = 0.002,
+                     rng: Optional[np.random.Generator] = None) -> Dict:
+        """RGB + metric depth from a fixed camera, with sensor noise.
+
+        This is the ONLY observation the perception stack gets. Intrinsics and
+        the camera pose are returned as calibration (known to a real robot too);
+        object poses are not.
+        """
+        if self._sensor_renderer is None or self._sensor_size != (height, width):
+            if self._sensor_renderer is not None:
+                self._sensor_renderer.close()
+            self._sensor_renderer = mujoco.Renderer(self.model, height, width)
+            self._sensor_size = (height, width)
+        r = self._sensor_renderer
+        r.update_scene(self.data, camera=camera)
+        rgb = r.render().copy()
+        r.enable_depth_rendering()
+        r.update_scene(self.data, camera=camera)
+        depth = r.render().copy()
+        r.disable_depth_rendering()
+
+        rng = rng if rng is not None else np.random.default_rng()
+        if rgb_noise:
+            rgb = np.clip(rgb.astype(np.float32) + rng.normal(0, rgb_noise, rgb.shape),
+                          0, 255).astype(np.uint8)
+        if depth_noise:
+            depth = depth + rng.normal(0, depth_noise, depth.shape).astype(np.float32)
+
+        cid = mujoco.mj_name2id(self.model, mujoco.mjtObj.mjOBJ_CAMERA, camera)
+        return {
+            "rgb": rgb, "depth": depth,
+            "fovy_deg": float(self.model.cam_fovy[cid]),
+            "cam_pos": np.array(self.data.cam_xpos[cid]),
+            "cam_mat": np.array(self.data.cam_xmat[cid]).reshape(3, 3),
+            "width": width, "height": height,
+        }
+
     def _home_arm_pose(self) -> np.ndarray:
         """Home pose in radians, from HOME_POSITION_DEG in settings.
 
@@ -394,6 +480,13 @@ class SO101Environment(MockSO101Environment):
             self.data.ctrl[6:8] = grip_cmd * self.GRIPPER_CLOSED
 
         self._update_grasp(grip_cmd)
+
+        if self._grasped is not None and self._slip_at is not None:
+            self._carry_steps += 1
+            if self._carry_steps >= self._slip_at:
+                self._release_grasped()  # injected slip: the block drops here
+                self._slip_at = None
+                self._slipped = True
 
         for _ in range(max(1, n_substeps)):
             if self._grasped is not None:
@@ -433,14 +526,12 @@ class SO101Environment(MockSO101Environment):
     def _update_grasp(self, grip_cmd: float):
         if grip_cmd < self.GRASP_TRIGGER:
             if self._grasped is not None:
-                # Release: zero the velocity so it drops, not flings.
-                adr = self._block_qpos_adr[self._grasped]
-                jid = mujoco.mj_name2id(self.model, mujoco.mjtObj.mjOBJ_JOINT,
-                                        f"{self._grasped}_free")
-                dof = self.model.jnt_dofadr[jid]
-                self.data.qvel[dof:dof + 6] = 0.0
-                self._grasped = None
+                self._release_grasped()
+            self._slipped = False  # the gripper opened: a fresh grasp may latch again
             return
+
+        if self._slipped:
+            return  # an injected slip must not be undone by instantly re-latching the falling block
 
         if self._grasped is not None:
             return
@@ -456,10 +547,23 @@ class SO101Environment(MockSO101Environment):
 
         if best is not None:
             self._grasped = best
+            self.grasp_attached = True
+            self._carry_steps = 0
+            self._slip_at = None
+            if self._fault_rng.random() < self.faults.slip_prob:
+                # Injected slip: the block will drop somewhere in lift/transfer.
+                self._slip_at = int(self._fault_rng.integers(10, 60))
             self._grasp_offset = np.array(self.data.xpos[self._body_ids[best]]) - np.array(site)
             # Keep it centred in the pads rather than at whatever offset it
             # happened to be nudged to.
             self._grasp_offset[:2] = 0.0
+
+    def _release_grasped(self):
+        """Hand the carried block back to the simulator (zero velocity: drop, don't fling)."""
+        jid = mujoco.mj_name2id(self.model, mujoco.mjtObj.mjOBJ_JOINT, f"{self._grasped}_free")
+        dof = self.model.jnt_dofadr[jid]
+        self.data.qvel[dof:dof + 6] = 0.0
+        self._grasped = None
 
     def _carry_grasped(self):
         adr = self._block_qpos_adr[self._grasped]
@@ -508,7 +612,7 @@ class SO101Environment(MockSO101Environment):
     # ------------------------------------------------------------------
 
     def solve_ik(self, target_xyz, iterations: int = 260,
-                 tol: float = 2e-3, seed=None) -> np.ndarray:
+                 tol: float = 2e-3, seed=None, restarts: int = 16) -> np.ndarray:
         """Joint angles putting grip_site at target_xyz, gripper pointing down.
 
         Damped least squares on the site Jacobian, solving position AND
@@ -533,11 +637,62 @@ class SO101Environment(MockSO101Environment):
             return self._get_observation()
 
         target = np.asarray(target_xyz, dtype=float)
+        live = np.array([self.data.qpos[a] for a in self._arm_qpos_adr])
+        first = live if seed is None else np.asarray(seed, dtype=float)
+        best_q, pe, re_ = self._ik_from(target, first, iterations, tol)
+        if (pe < 8e-3 and re_ < 0.15) or restarts <= 0:
+            return best_q  # converged from the live pose: stays in its solution branch
+
+        # A cheap second try: a canonical "hover over the table, gripper down" pose.
+        q, pe2, re2 = self._ik_from(target, self._canonical_seed(), iterations, tol)
+        if pe2 < 8e-3 and re2 < 0.15:
+            return q
+
+        # DLS from the live pose can stall in a joint-limit local minimum (the
+        # wrist pinned at +-pi). Restart from yaw-aligned random seeds and keep
+        # the best; deterministic per target so rollouts stay reproducible.
+        rng = np.random.default_rng(int(abs(hash(tuple(np.round(target, 3)))) % (2 ** 32)))
+        best_cost = pe + 0.5 * re_
+        yaw = float(np.arctan2(target[1], target[0]))
+        converged = []
+        for _ in range(restarts):
+            q0 = np.array([yaw, rng.uniform(-0.4, 1.4), rng.uniform(0.6, 2.4),
+                           rng.uniform(-1.5, 1.2), rng.uniform(-1.0, 1.0), rng.uniform(-1.5, 1.5)])
+            q, pe2, re2 = self._ik_from(target, q0, iterations, tol)
+            cost = pe2 + 0.5 * re2
+            if pe2 < 8e-3 and re2 < 0.15:
+                converged.append(q)
+            elif cost < best_cost and not converged:
+                best_q, best_cost = q, cost
+        if converged:
+            # Several joint configurations reach the point (wrist flipped by pi,
+            # elbow up/down). Take the one nearest the live pose so the arm moves
+            # smoothly and phase-to-phase solutions stay in one branch.
+            best_q = min(converged, key=lambda c: float(np.linalg.norm(c - live)))
+        return best_q
+
+    def _canonical_seed(self) -> np.ndarray:
+        """Arm configuration hovering over the table centre, gripper pointing down."""
+        if getattr(self, "_canon_q", None) is None:
+            rng = np.random.default_rng(1234)
+            target = np.array([0.3, 0.0, 0.2])
+            for _ in range(200):
+                q0 = np.array([0.0, rng.uniform(-0.4, 1.4), rng.uniform(0.6, 2.4),
+                               rng.uniform(-1.5, 1.2), rng.uniform(-1.0, 1.0), rng.uniform(-1.5, 1.5)])
+                q, pe, re_ = self._ik_from(target, q0, 260, 2e-3)
+                if pe < 3e-3 and re_ < 0.1 and abs(q[4]) < 0.5:
+                    self._canon_q = q
+                    break
+            else:
+                self._canon_q = q0
+        return self._canon_q
+
+    def _ik_from(self, target, q0, iterations, tol):
+        """One DLS run from q0. Returns (q, position error m, orientation error rad)."""
         scratch = mujoco.MjData(self.model)
         scratch.qpos[:] = self.data.qpos
-        if seed is not None:
-            for adr, val in zip(self._arm_qpos_adr, np.asarray(seed, dtype=float)):
-                scratch.qpos[adr] = val
+        for adr, val in zip(self._arm_qpos_adr, np.asarray(q0, dtype=float)):
+            scratch.qpos[adr] = val
         mujoco.mj_forward(self.model, scratch)
 
         jacp = np.zeros((3, self.model.nv))
@@ -581,7 +736,12 @@ class SO101Environment(MockSO101Environment):
             for k, adr in enumerate(self._arm_qpos_adr):
                 scratch.qpos[adr] = np.clip(scratch.qpos[adr] + step[k], -np.pi, np.pi)
 
-        return np.array([scratch.qpos[a] for a in self._arm_qpos_adr])
+        mujoco.mj_forward(self.model, scratch)
+        pos_err = np.linalg.norm(target - scratch.site_xpos[self._grip_site_id])
+        R_cur = scratch.site_xmat[self._grip_site_id].reshape(3, 3)
+        R_err = R_goal @ R_cur.T
+        rot = float(np.arccos(np.clip((np.trace(R_err) - 1.0) * 0.5, -1.0, 1.0)))
+        return np.array([scratch.qpos[a] for a in self._arm_qpos_adr]), float(pos_err), rot
 
     # ------------------------------------------------------------------
     # Rendering
@@ -637,12 +797,14 @@ class SO101Environment(MockSO101Environment):
             return super().render(width=width, height=height, phase=phase, **kwargs)
 
     def close(self):
-        if self._renderer is not None:
-            try:
-                self._renderer.close()
-            except Exception:
-                pass
-            self._renderer = None
+        for attr in ("_renderer", "_sensor_renderer"):
+            r = getattr(self, attr, None)
+            if r is not None:
+                try:
+                    r.close()
+                except Exception:
+                    pass
+                setattr(self, attr, None)
 
 
 def create_environment(xml_path: Optional[str] = None) -> MockSO101Environment:

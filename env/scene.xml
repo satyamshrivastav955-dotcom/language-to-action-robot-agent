@@ -3,6 +3,11 @@
 
   <option timestep="0.002" gravity="0 0 -9.81" integrator="implicitfast"/>
 
+  <visual>
+    <headlight ambient="0.35 0.35 0.35" diffuse="0.25 0.25 0.25" specular="0 0 0"/>
+    <global offwidth="1280" offheight="960"/>
+  </visual>
+
   <asset>
     <texture name="grid" type="2d" builtin="checker" rgb1="0.2 0.2 0.2" rgb2="0.3 0.3 0.3" width="512" height="512"/>
     <material name="grid" texture="grid" texrepeat="4 4"/>
@@ -10,14 +15,15 @@
   </asset>
 
   <default>
-    <joint armature="0.01" damping="1" limited="true"/>
+    <!-- armature 0.05: at 0.01 the wrist joints (4, 6) chatter at ~30 rad/s (kp/kv too stiff for their inertia), which flings blocks at release. -->
+    <joint armature="0.05" damping="1" limited="true"/>
     <geom contype="1" conaffinity="1" friction="1.2 0.02 0.001" solref="0.005 1"/>
     <position kp="900" kv="60" forcerange="-350 350"/>
   </default>
 
   <worldbody>
-    <light diffuse="0.9 0.9 0.9" pos="0.3 0 2.5" dir="0 0 -1" directional="true"/>
-    <light diffuse="0.4 0.4 0.4" pos="1.5 1.5 2" dir="-0.5 -0.5 -0.8"/>
+    <light diffuse="0.55 0.55 0.55" specular="0 0 0" pos="0.3 0 2.5" dir="0 0 -1" directional="true"/>
+    <light diffuse="0.25 0.25 0.25" specular="0 0 0" pos="1.5 1.5 2" dir="-0.5 -0.5 -0.8"/>
 
     <!-- Cameras used by render(); camera1 is the demo view. -->
     <camera name="camera1" pos="0.78 -0.58 0.62" xyaxes="0.6 0.8 0 -0.42 0.31 0.85"/>
